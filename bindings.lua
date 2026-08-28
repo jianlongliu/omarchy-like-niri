@@ -31,7 +31,6 @@
 hl.unbind("PRINT")
 o.bind("PRINT", "Screenshot", "omasnap")
 o.bind("SUPER + E", nil, "/home/jianlongliu/.local/bin/nautilus")
-o.bind("SUPER + GRAVE", "Workspace overview", "omarchy-shell shell toggle io.github.sirmenef.workspace-overview '{}'")
 -- ScrollOverview: niri-style workspace overview on SUPER+TAB (frees the default
 -- "Next workspace" binding for this). Must use the Lua API, not the
 -- scrolloverview:overview dispatcher string — that path silently no-ops.
