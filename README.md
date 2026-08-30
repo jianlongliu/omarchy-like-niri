@@ -15,6 +15,8 @@ omarchy-like-niri/
 - `hypr/`：ScrollOverview 插件、`workspaces` 纵向动画、niri 化快捷键、有界工作区/移窗函数
 - `omarchy/`：shell 配置 + 自改 `jianlongliu.*` 克隆插件（clock/menu/osd/keyboard-layout/system-update/workspaces）
 
+> 克隆插件在用户目录 `~/.config/omarchy/plugins/`，不在系统包内，`omarchy update` **不会覆盖**它们。把它们纳入 git 是用于**版本回退 + 备份/迁移**，不是"防 update 覆盖"（那本来就不需要）。
+
 ## 安装方式
 
 完整可移植教程 + 分步安装（每步带验证/回退）：**`docs/omarchy-nirification.md`**（含文首「〇执行顺序总览」），配 `hypr/CHANGELOG.md` / `omarchy/CHANGELOG.md` 了解改动历史。
