@@ -15,3 +15,8 @@ plugins/*
 
 # 日志
 *.log
+
+# 私人壁纸与头像（不进公开仓库）
+backgrounds/
+avatar.png
+avatar_circle.png
