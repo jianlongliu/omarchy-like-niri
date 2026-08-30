@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# theme-set hook: 主题切换后重新生成 Zen 色桥 (omarchy-colors.css)。
+set -u
+"$HOME/.local/bin/zen-omarchy-colors-sync" || true
