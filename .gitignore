@@ -1,0 +1,43 @@
+# ===== 根级 .gitignore：全局兜底 =====
+# 本仓库是 hypr + omarchy 的合并仓库，此处规则对所有子目录生效。
+# 主要目标：防止再次把私人图片/密钥/备份带进公开仓库。
+
+# --- 私人媒体：壁纸、头像、图片（防止 subtree 合入子仓库时一并带入） ---
+**/backgrounds/
+**/avatar.png
+**/avatar_circle.png
+**/avatar*.png
+**/wallpaper*.png
+**/wallpaper*.jpg
+
+# --- 密钥与凭证（宁可多挡，不可漏） ---
+*.pem
+*.key
+*.p12
+*.pfx
+*.env
+*.env.*
+**/.env
+**/secrets/
+**/credentials*
+**/*token*
+**/*password*
+
+# --- 备份与临时文件 ---
+*.bak
+*.bak.*
+*.bak.*[0-9]
+**/backups/
+*.log
+*.tmp
+*.swp
+*~
+
+# --- 嵌套 git 仓库（subtree 时避免误纳 .git） ---
+.git/
+**/.git/
+
+# --- 编辑器/IDE ---
+.vscode/
+.idea/
+.DS_Store
