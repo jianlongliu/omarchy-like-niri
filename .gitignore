@@ -1,0 +1,17 @@
+# 第三方/社区插件（各带自己的上游 git 仓库），不进本配置仓库。
+# 只跟踪我们自己克隆改动的 jianlongliu.* 插件（下方 ! 放行）。
+plugins/*
+!plugins/jianlongliu.*
+
+# 嵌套 git 仓库兜底
+.git/
+**/.git/
+
+# omarchy 自动生成的备份（*.bak.* 与 *.bak 都挡）
+*.bak
+*.bak.*
+*.bak.*[0-9]
+**/backups/
+
+# 日志
+*.log

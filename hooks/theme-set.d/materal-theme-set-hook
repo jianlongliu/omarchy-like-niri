@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# theme-set hook: 主题切换后，若切到的是 materal 动态主题，立即按当前壁纸重新取色。
+# 守卫：materal-update 内部 apply 时先设 guard，此 hook 再被触发时直接跳过，避免死循环。
+set -u
+
+slug="$1"
+GUARD="$HOME/.cache/materal/guarded-by-internal"
+
+if [[ -f "$GUARD" ]]; then
+  rm -f "$GUARD"
+  exit 0
+fi
+
+# 只处理 materal 主题（有 matugen.toml 的）
+[[ -f "$HOME/.config/omarchy/themes/$slug/matugen.toml" ]] || exit 0
+
+"$HOME/.local/bin/materal-update" "$slug"
