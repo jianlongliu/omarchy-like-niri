@@ -1,0 +1,146 @@
+{
+  "bar": {
+    "centerAnchor": "jianlongliu.clock",
+    "layout": {
+      "center": [
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "ak.thermals"
+        },
+        {
+          "id": "jianlongliu.clock"
+        },
+        {
+          "id": "jianlongliu.keyboard-layout"
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.power"
+        },
+        {
+          "id": "omarchy.spacer"
+        },
+        {
+          "id": "omarchy.media"
+        },
+        {
+          "id": "jianlongliu.system-update"
+        }
+      ],
+      "left": [
+        {
+          "id": "jianlongliu.menu"
+        },
+        {
+          "id": "jianlongliu.workspaces"
+        },
+        {
+          "id": "io.github.majesticio.clipboard-button"
+        },
+        {
+          "id": "local.opencode-go-usage"
+        },
+        {
+          "id": "omarchy.active-window"
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.agents"
+        },
+        {
+          "id": "omarchy.tray",
+          "pinned": [],
+          "hidden": [
+            "Fcitx"
+          ]
+        },
+        {
+          "id": "io.github.xgborgeso.peripheral-batteries"
+        },
+        {
+          "id": "io.github.sahzudin.omarchy-screenshot-manager"
+        },
+        {
+          "id": "io.github.lijiawei0305-pixel.mihomo"
+        },
+        {
+          "id": "srozen.ufw"
+        },
+        {
+          "id": "omarchy.microphone"
+        },
+        {
+          "id": "jesseburlamaque.omarchy-find"
+        },
+        {
+          "id": "halmylyseas.github-status"
+        },
+        {
+          "id": "jrmmhm.pocket",
+          "members": "io.github.sahzudin.omarchy-screenshot-manager, io.github.lijiawei0305-pixel.mihomo, srozen.ufw, omarchy.microphone, jesseburlamaque.omarchy-find, halmylyseas.github-status"
+        },
+        {
+          "id": "community.cn-input"
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "abran-labs.notification-center"
+        },
+        {
+          "id": "dizziee.power-profiles"
+        },
+        {
+          "id": "omarchy-system-menu"
+        }
+      ]
+    },
+    "position": "top",
+    "transparent": false,
+    "id": "charlieras262.floating-bar"
+  },
+  "idle": {
+    "lock": 1200,
+    "screensaver": 86400
+  },
+  "plugins": [
+    {
+      "id": "io.github.sirjul1337.lock-explorer",
+      "design": "split"
+    },
+    {
+      "id": "andreconde.quick-look"
+    },
+    {
+      "id": "io.github.jonhenshaw.voxtype-prism"
+    },
+    {
+      "id": "abdul.hotcorners"
+    }
+  ],
+  "version": 1,
+  "disabledPlugins": [
+    "omarchy.lock",
+    "omarchy.nightlight",
+    "omarchy.menu"
+  ],
+  "cloneSourceRestores": [
+    "io.github.sirjul1337.lock-explorer",
+    "jianlongliu.menu"
+  ]
+}
