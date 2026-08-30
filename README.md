@@ -17,14 +17,14 @@ omarchy-like-niri/
 
 ## 安装方式
 
-完整可移植教程 + 分步安装（每步带验证/回退）：**`hypr/CHANGELOG.md`** 与本地归档文档 `~/Documents/AI Agents/omarchy-nirification.md`（含文首「〇执行顺序总览」）。
+完整可移植教程 + 分步安装（每步带验证/回退）：**`docs/omarchy-nirification.md`**（含文首「〇执行顺序总览」），配 `hypr/CHANGELOG.md` / `omarchy/CHANGELOG.md` 了解改动历史。
 
 ### 给 AI agent 的安装提示词
 
-> 以下提示词可直接交给 AI agent 执行安装：
+> 以下提示词可直接交给 AI agent 执行安装（`docs/omarchy-nirification.md` 已在仓库内，clone 即自包含）：
 
 ```
-按 ~/Documents/AI Agents/omarchy-nirification.md 的「〇、执行顺序总览」逐步安装 niri 化配置。
+按 docs/omarchy-nirification.md 的「〇、执行顺序总览」逐步安装 niri 化配置。
 
 要求：
 1. 每步先读对应章节再动手，做完一步用文档里的「验证」确认过了再下一步。
