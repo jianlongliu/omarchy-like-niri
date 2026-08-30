@@ -1,0 +1,6 @@
+# matugen 取色参数（materal-update 会读取）
+# scheme: matugen 的 -t scheme-* 取值（去掉 scheme- 前缀）
+scheme = "expressive"
+
+# 模式：dark / light，matugen 的 -m
+mode = "dark"

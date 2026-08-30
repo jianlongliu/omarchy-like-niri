@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "triggerSize": 4,
+  "dwellMs": 400,
+  "cooldownMs": 1500,
+  "shortcut": "",
+  "requireSuper": false,
+  "suppressFullscreen": true,
+  "glow": true,
+  "corners": {
+    "top-left": {
+      "action": "hyprctl dispatch 'hl.plugin.scrolloverview.overview(\"toggle all\")'"
+    },
+    "top-right": {
+      "action": ""
+    },
+    "bottom-left": {
+      "action": ""
+    },
+    "bottom-right": {
+      "action": ""
+    }
+  }
+}

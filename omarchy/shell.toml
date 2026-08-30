@@ -1,0 +1,23 @@
+[bar]
+background-alpha = 0.5
+size-horizontal = 40
+
+[popups]
+background-alpha = 0.58
+
+[menu]
+background-alpha = 0.6
+scrim-alpha = 0.4
+
+[launcher]
+background-alpha = 0.6
+scrim-alpha = 0.4
+
+[notifications]
+background-alpha = 0.6
+
+[tooltip]
+background-alpha = 0.8
+
+[font]
+base-size = 14
