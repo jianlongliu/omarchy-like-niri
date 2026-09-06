@@ -15,7 +15,8 @@
 - [七、验证命令](#七验证命令)
 - [八、可选：触控板手势](#八可选触控板手势)
 - [九、可选：nautilus 默认浮动](#九可选nautilus-默认浮动)
-- [十、注意事项](#十注意事项)
+- [十、插件职责区分](#十插件职责区分)
+- [一句话总结](#一句话总结)
 
 ## 安装步骤（执行顺序总览）
 
@@ -28,13 +29,13 @@
 | 3 | 加 autostart 自加载（hyprpm reload） | 二 | 重启后 `hyprctl plugins list` 仍加载 | 删 `hyprland.start` 回调 |
 | 4 | 开 `workspaces` 纵向动画 | 五 | `configerrors` 空；切工作区有滑动 | `enabled=false` |
 | 5 | 绑 niri 化快捷键 | 六 | `hyprctl -j binds` 查到新绑定 | `hl.unbind` 那些键 |
-| 6 | 加有界动态工作区函数 | 六 | 滚轮 1→2→3 停在空区 | 还原 `bindings.lua` |
-| 7 | （可选）nautilus 默认浮动 | 九 | 重开 nautilus 为浮动 | 删 `o.window` 行 |
-| 8 | （可选）触控板手势 | 八 | 手势触发总览 | 移除 gesture 调用 |
+| 6 | 加有界动态工作区函数（Super+滚轮） | 六 | 滚轮 1→2→3 停在空区 | 还原 `bindings.lua` |
+| 7 | 加有界移窗函数（Super+Ctrl+↑/↓） | 六 | 实按：独窗不越界 | 还原 `bindings.lua` |
+| 8 | （可选）nautilus 默认浮动 | 九 | 重开 nautilus 为浮动 | 删 `o.window` 行 |
 | 9 | 总验证 | 七 | `configerrors` 空 + 插件加载 | 逐节回退 |
 
 > 换机器先 `hyprctl -j binds` 查 Super+Tab 等是否已被占，再决定覆盖。
-> 笔记本/有触控板可启用第 8 节手势（桌面机默认不启用）。
+> 笔记本/有触控板可额外启用第 8 节触控板手势（桌面机默认不启用）。
 
 ## 一、目标效果
 
@@ -44,10 +45,12 @@
 | 总览里滚动切工作区 | 卡片带动画滑动切换 | 生硬瞬切 |
 | 平铺下 Super+滚轮切工作区 | **纵向**滑动（slidevert） | 硬切（`workspaces` 动画默认关闭） |
 
+> Super+Tab 触发 ScrollOverview；Super+滚轮在普通平铺下纵向切换工作区（与 niri 一致）。
+
 ## 二、安装 ScrollOverview 插件
 
 ```bash
-hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git
+hyprpm add https://github.com/yayuuu/hyprland-scroll-overview.git   # 用仓库默认分支即可
 hyprpm update
 hyprpm enable scrolloverview
 ```
@@ -56,7 +59,9 @@ hyprpm enable scrolloverview
 
 > **插件编译失败**：若加载因 Hyprland 版本不匹配失败，用 `hyprpm add <url> <git-rev>` 锁定适配你版本的提交（先用默认分支，失败再锁 rev）。
 
-**重启后插件自动加载**（`~/.config/hypr/autostart.lua`）：`hyprpm enable` 只是持久化状态，真正注入 Hyprland 靠 `hyprpm reload`，重启后需重跑。
+**重启后插件不会自动加载（踩坑）**：`hyprpm enable` 只是持久化"状态"，真正把插件注入 Hyprland 靠 `hyprpm reload`。重启后没人跑它，`hyprctl plugins list` 会显示 `no plugins loaded`，`plugins.lua` 里的 `plugin.scrolloverview.*` 全部报 `unknown config key`。
+
+**启动自加载**（`~/.config/hypr/autostart.lua`）：
 
 ```lua
 hl.on("hyprland.start", function()
@@ -64,7 +69,8 @@ hl.on("hyprland.start", function()
 end)
 ```
 
-> `sleep 2` 给 Hyprland socket 就绪时间（hyprpm reload 要调 hyprland）。此坑对任何 hyprpm 插件都成立。
+> `sleep 2` 给 Hyprland socket 就绪时间（hyprpm reload 要调 hyprland）。此坑对**任何 hyprpm 插件**都成立。
+> 诊断：`hyprctl plugins list`（实际加载）vs `hyprpm list`（enabled 状态）二者不一致 = 插件没加载 → config unknown key。即时修复 = `hyprpm reload` + `hyprctl reload`。
 
 ## 三、配置 ScrollOverview
 
@@ -86,11 +92,12 @@ hl.config({
 })
 ```
 
-> **不要写 `input` 子块**：`scroll_event_delay` / `touchpad_scroll_factor` 等在本插件版本不存在（`hyprctl getoption plugin:scrolloverview:*` 报 `no such option`），overview 内滚动/拖拽走插件默认。可用 `hyprctl getoption plugin:scrolloverview:<key>` 逐键确认版本支持的配置项。
+> **不要写 `input` 子块**（旧版本有，本插件版本不存在）：`scroll_event_delay` / `touchpad_scroll_factor` / `scrolling_mode` / `drag_mode` / `drag_threshold` 经 `hyprctl getoption plugin:scrolloverview:*` 实测全部 `no such option`。overview 内滚动/拖拽行为走插件默认，无需配置。
+> 用 `hyprctl getoption plugin:scrolloverview:<key>` 可逐键确认插件版本支持的配置项。
 
 ## 四、触发总览（Super+Tab）
 
-**必须用 Lua 函数，别用 dispatcher 字符串**（后者走 exec_cmd 会静默空操作，按了没反应）。
+**必须用 Lua 函数，别用 dispatcher 字符串**（后者会走 `hl.dsp.exec_cmd(...)`，看似返回 ok，实际**静默空操作**——按了没反应、不报错）。
 
 `~/.config/hypr/bindings.lua`：
 
@@ -101,9 +108,11 @@ hl.bind("SUPER + TAB", function()
 end, { description = "Scroll overview" })
 ```
 
-手动测试：`hyprctl dispatch 'hl.plugin.scrolloverview.overview("toggle all")'`。
+手动测试（能真开/关）：
+- ✅ `hyprctl dispatch 'hl.plugin.scrolloverview.overview("toggle all")'`
+- ❌ `hyprctl dispatch scrolloverview:overview "toggle all"`（冒号名走 Lua 回退，报 `function arguments expected near 'toggle'`）
 
-### 可用 dispatcher
+### 可用 dispatcher（`hl.plugin.scrolloverview.<name>`）
 - `overview(...)`：`toggle [monitor|all]` / `open|on` / `close|off` / `select`
 - `navigate(left|right|up|down)`：overview 内移动选中
 - `window(select|close)`：对鼠标所指窗口操作
@@ -125,7 +134,7 @@ end)
 
 ## 五、纵向平滑切换动画
 
-`~/.config/hypr/looknfeel.lua`。Omarchy 默认关闭 `workspaces` 动画（切工作区硬切），打开并设为纵向：
+`~/.config/hypr/looknfeel.lua`。Omarchy 默认关闭 `workspaces` 动画（切工作区硬切、零动画），打开并设为纵向：
 
 ```lua
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidevert" })
@@ -134,19 +143,22 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOut
 - `style = "slidevert"`：**纵向**滑动（niri 竖排）。`slide` / `slidefade` 是横向；`popin` 弹入。
 - `bezier` 可选：`default` `easeOutQuint` `easeInOutCubic` `linear` `almostLinear` `quick`。想更"流"换 `easeInOutCubic`。
 - `speed` 越低越慢/平滑。
+- 想滑+淡：可试 `slidefadevert`（属未验证项，改后看 `hyprctl configerrors` 是否为空）。
+
+Super+滚轮默认绑定在 `/usr/share/omarchy/default/hypr/bindings/tiling.lua`：`SUPER + mouse_down` → `hl.dsp.focus({ workspace = "e+1" })`；`SUPER + mouse_up` → `e-1`。方向反了就在 `bindings.lua` 里 `hl.unbind` 后对调。
 
 ## 六、niri 化快捷键与有界工作区
 
 ### 快捷键表
 
-| 按键 | 动作 |
-| --- | --- |
-| `Super + Tab` | 开/关 ScrollOverview |
-| `Super + PageUp` / `PageDown` | 上一 / 下一工作区 |
-| `Super + Ctrl + ↑` / `↓` | 移焦点窗口到上一 / 下一工作区（有界） |
-| `Super + 滚轮` | 上一 / 下一工作区（有界动态，到空区即停） |
-| `Super + Q` / `Alt + F4` | 关闭当前窗口 |
-| `Alt + 滚轮` | 聚焦右 / 左窗（空间，非循环） |
+| 按键 | 动作 | dispatcher |
+| --- | --- | --- |
+| `Super + Tab` | 开/关 ScrollOverview（总览，layout=vertical） | `hl.plugin.scrolloverview.overview("toggle all")` |
+| `Super + PageUp` / `PageDown` | 上一 / 下一工作区 | `hl.dsp.focus({ workspace = "e-1"/"e+1" })` |
+| `Super + Ctrl + ↑` / `↓` | 移焦点窗口到上一 / 下一工作区（有界，独窗不越界） | `move_prev/next_workspace()` |
+| `Super + 滚轮` | 上一 / 下一工作区（纵向 slidevert，**有界动态**，到空区即停） | `scroll_next/prev_workspace()` |
+| `Super + Q` / `Alt + F4` | 关闭当前窗口 | `hl.dsp.window.close()` |
+| `Alt + 滚轮` | 聚焦右 / 左窗（空间，非循环） | `hl.dsp.focus({ direction = "r"/"l" })` |
 
 原 Omarchy 默认 `SUPER + W` 是关窗，此处 `hl.unbind` 挪到 `Super + Q` / `Alt + F4`。滚轮切窗用单 `Alt`（原 Super+Alt 挪走）。
 
@@ -171,9 +183,11 @@ o.bind("ALT + mouse_down", "Focus window right", hl.dsp.focus({ direction = "r" 
 o.bind("ALT + mouse_up",   "Focus window left",  hl.dsp.focus({ direction = "l" }))
 ```
 
+> 查某键是否绑定时**用 `hyprctl -j binds` + python 解析 modmask/key**，别用 `grep -B`——它的上下文会错位，把别的绑定的 modmask/description 串过来误导判断。
+
 ### 有界动态工作区（Super+滚轮）
 
-默认 `e+1`/`e-1` 只在已有非空工作区间跳、末尾不新建。想要 niri 那种"滚到底自动建一个空区就停"（1、2 有 app → 滚到 3 后停，不续建 4、5），在 `bindings.lua` 覆盖为自定函数：
+原版 Super+滚轮用 `hl.dsp.focus({ workspace = "e+1"/"e-1" })`：`e+1` 是"下一个**空**工作区"，会在已有非空工作区间跳、末尾不新建。想要 niri 那种"滚到底自动进新工作区"、但**只进一个空工作区就停**（1、2 有 app → 滚到 3 后停，不续建 4、5），在 `bindings.lua` 覆盖为自定函数：
 
 ```lua
 local function table_value(value, ...)
@@ -200,7 +214,7 @@ end
 
 local function scroll_next_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then return end   -- 已在空区 → 停
+  if not current or current.windows == 0 then return end   -- 已在空工作区 → 停
   hl.dispatch(hl.dsp.focus({ workspace = tostring(current.id + 1) }))
 end
 
@@ -216,21 +230,29 @@ hl.bind("SUPER + mouse_down", scroll_next_workspace, { description = "Next works
 hl.bind("SUPER + mouse_up",   scroll_prev_workspace, { description = "Previous workspace" })
 ```
 
-**逻辑**：前进时当前区有窗口 → `focus(当前id+1)`（Hyprland 对不存在编号自动创建），到空区后 `windows==0` 停；后退到 1 停。用 `hl.dispatch` 走真实按键路径。
+**逻辑**：前进时当前区有窗口 → `focus(当前id+1)`（Hyprland 对不存在的编号自动创建），到空区后 `windows==0` 就停，不续建 4、5；后退到 1 停。用 `hl.dispatch` 在真实按键路径执行（同 ScrollOverview 官方 Dynamic-workspaces recipe 写法）。
 
 ### 有界移动窗口（Super+Ctrl+↑/↓）
 
-把焦点窗口移到相邻工作区，但**禁止连环建空区**。`bindings.lua`：
+把焦点窗口移到相邻工作区，但**禁止连环建空区**（同滚轮滚动一个哲学）。
+
+**踩坑（两个都会"按不出来/按过头"）：**
+- `hl.dsp.window.move({ workspace = "e+1" })`：`e+n` = 跳到**已打开**工作区。只有 1 个区时 → 没有下一个已打开区可移 → **静默空操作**，窗口纹丝不动。
+- `hl.dsp.window.move({ workspace = "+1" })`：`+n` = 相对编号，会**自动建**下一个编号工作区。连续按会 1→2→3→4…**无限连环建空工作区**。
+- 结论：`e+n` 不建、`+n` 无限建 → 都要自定 Lua 函数做"停在空边界"。
 
 ```lua
+-- 移到下一个工作区：仅当当前工作区还有其他窗口(windows>1)才推出去；
+-- 移过去后窗口成了该区唯一窗口 → 停，不会连环建 3、4、5。
 local function move_next_workspace()
   local current = current_workspace()
   if not current or current.windows == 0 then return end
-  if current.windows > 1 then   -- 仅当区里还有其他窗口才推出去
+  if current.windows > 1 then
     hl.dispatch(hl.dsp.window.move({ workspace = tostring(current.id + 1) }))
   end
 end
 
+-- 移回上一个工作区：只守规则(不低于工作区 1)，不受窗口数限制。
 local function move_prev_workspace()
   local current = current_workspace()
   if not current or current.windows == 0 then return end
@@ -244,16 +266,18 @@ hl.bind("SUPER + CTRL + UP",   move_prev_workspace, { description = "Move window
 hl.bind("SUPER + CTRL + DOWN", move_next_workspace, { description = "Move window to next workspace (stop at empty)" })
 ```
 
-> **回退方向不能也卡 `windows>1`**：窗口被推走后区里只剩它自己，回退再卡窗口数会锁死回不来。所以前进卡（停空边界）、回退只守下限。
+> **回退方向不能也卡 `windows>1`**：窗口被推走后区里只剩它自己，回退再卡窗口数会**把窗口锁死回不来**。所以前进卡（停空边界）、回退只守下限。
 
 ## 七、验证命令
 
 ```bash
-hyprctl reload
+hyprctl reload                          # 重载配置，应输出 ok
 hyprctl configerrors                    # 必须为空
 hyprctl plugins list                    # 确认 scrolloverview 已加载
 hyprctl dispatch 'hl.plugin.scrolloverview.overview("toggle all")'   # 手动开关 overview
 ```
+
+> **`hyprctl getoption animation:*` 报 `no such option`** 是这版 Hyprland 的正常现象（连已生效的 `animation:windows` 也报）——判断看 `configerrors` 是否为空，不是配置没生效。
 
 ## 八、可选：触控板手势
 
@@ -267,21 +291,32 @@ hl.plugin.scrolloverview.gesture({ fingers = 3, direction = "vertical", action =
 
 ## 九、可选：nautilus 默认浮动
 
-文件管理器用浮动窗口更好拖拽/多开。`~/.config/hypr/windows.lua`：
+文件管理器用浮动窗口更好拖拽/多开；class 是 `org.gnome.Nautilus`（用 `hyprctl clients` 可查当前窗口 class）。`~/.config/hypr/windows.lua`：
 
 ```lua
 o.window("org.gnome.Nautilus", { float = true, opacity = "0.88 0.82" })
 ```
 
-- `float = true` 让窗口浮动；`opacity` 保留毛玻璃。
-- 新版 Hyprland 用 `o.window(match, rules)` 助手（match 可传 class 字符串或 `{ class=..., float=... }` 表），**别用**旧 hyprlang 的 `windowrule = float`。
-- `float` 是**静态效果，窗口创建时求值**：改规则后要**重开该窗口**才生效，`hyprctl reload` 不会变已平铺的旧窗口。
+- 第二参是**效果表**，`float = true` 让窗口浮动；`opacity` 保留毛玻璃。
+- 新版 Hyprland 已转 Lua：规则用 `o.window(match, rules)` 助手（match 可传 class 字符串或 `{ class=..., float=... }` 表）。**别用**旧 hyprlang 的 `windowrule = float`。
+- `float` 是**静态效果，窗口创建时求值**：`hyprctl reload` 不会把已平铺的旧窗口变成浮动，**重开该窗口才会浮动**。
 
-## 十、注意事项
+## 十、插件职责区分
 
-- **触发总览必须用 Lua 函数**，dispatcher 字符串会静默空操作（见第四节）。
-- **`getoption animation:*` 报 `no such option`** 是这版 Hyprland 的正常现象（连已生效的 `animation:windows` 也报），判断看 `configerrors` 是否为空，不是配置没生效。
-- **查绑定用 `hyprctl -j binds` + python 解析 modmask/key**，别用 `grep -B`——上下文会错位，把别的绑定的 modmask/description 串过来误导。
-- **移动窗口到工作区**：`hl.dsp.window.move({ workspace = "e+n" })` 只跳已打开区（单区会静默空操作）；`"+n"` 会无限连环建空区。有界要用 `current.windows > 1` 卡前进、回退只守下限。
-- **`cycle_next` 天生循环**（`cyclic=false` 无效），滚轮切窗要用空间聚焦（到边缘就停）。
-- **scrolloverview vs Omarchy shell 插件**是两套机制：`hyprpm` / `hyprctl plugins` vs `omarchy plugin` / `shell.json`。scrolloverview 相关 `hl.plugin.*` 报 `unknown config key` = 插件没加载（`hyprpm reload`）；shell 插件不生效先查 `omarchy plugin list`。
+scrolloverview 是 **Hyprland 原生插件**（yayuuu/hyprland-scroll-overview，由 `hyprpm` 管理），**不是** Omarchy shell 插件，判定/加载方式完全不同：
+
+| 维度 | scrolloverview | Omarchy shell 插件 |
+| --- | --- | --- |
+| 管理机制 | `hyprpm` / `hyprctl plugins` | `omarchy plugin` / `shell.json` |
+| 加载方式 | `hyprpm reload`（重启不自动，需 autostart.lua） | `omarchy restart shell` / rescan |
+| 典型例子 | 总览网格卡片 | bar widget、菜单、OSD |
+
+区分不清时的典型症状：scrolloverview 相关 `hl.plugin.*` 报 `unknown config key` = 插件没加载（`hyprpm reload`）；而 shell 插件不生效先查 `omarchy plugin list` 状态和是否被 update 覆盖。
+
+> 若 bar 上同时有「工作区指示器」和 scrolloverview：二者互补不冲突——指示器只做外观，scrolloverview 只做切换交互。
+
+## 一句话总结
+
+想让 Omarchy 像 niri：装 ScrollOverview（`hyprpm enable scrolloverview`）→ `plugins.lua` 配 `plugin.scrolloverview` 并**用 `hl.plugin.scrolloverview.overview("toggle all")` Lua 函数绑定 Super+Tab** → `looknfeel.lua` 打开 `workspaces` 动画并设 `style = "slidevert"` 实现纵向平滑切换 → `bindings.lua` 按上面快捷键表配好 Super+Tab / PageUp / PageDown / Super+滚轮 / Super+Ctrl+↑/↓ / Q / Alt+F4 / Alt+滚轮；nautilus 用 `o.window(..., { float = true, opacity = ... })` 默认浮动。
+
+踩过的坑：ScrollOverview 的 dispatcher 字符串走 exec_cmd 会静默空操作；`workspaces` 动画默认关闭导致硬切；`cycle_next` 天生循环（`cyclic=false` 无效）要用空间聚焦；getoption 查不了动画、hyprctl dispatch 只认 Lua 表达式；查绑定要用 `hyprctl -j binds` 解析而非 grep 上下文；移动窗口到工作区 `e+n` 只跳已打开（单区会空操作）、`+n` 会无限连环建，有界要用 `current.windows > 1` 卡前进、回退只守下限。
