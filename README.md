@@ -42,3 +42,4 @@ omarchy-like-niri/
 - 配置与文档由 AI agent 生成/整理，改动含 AI 协助调参、排障。
 - 各插件版权归原作者；自改 `jianlongliu.*` 克隆插件基于 Omarchy 内建插件。
 - 改动历史见 `hypr/CHANGELOG.md` 与 `omarchy/CHANGELOG.md`。
+- `omarchy/lock-avatar.png`：锁屏头像样例（lock-explorer 探测的首选路径），拷到 `~/.config/omarchy/lock-avatar.png` 即被读取；不想要就删，锁屏回落显示用户首字母。
