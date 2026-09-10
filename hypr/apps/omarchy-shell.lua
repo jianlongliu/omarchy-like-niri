@@ -15,7 +15,11 @@ hl.layer_rule({ match = { namespace = "omarchy-polkit" }, blur = true, ignore_al
 hl.layer_rule({ match = { namespace = "omarchy-reminders" }, blur = true, ignore_alpha = 0.5 })
 -- Omarchy Find overlay: full-screen scrim + centered card, same shape as polkit/menu.
 hl.layer_rule({ match = { namespace = "omarchy-find" }, blur = true, ignore_alpha = 0.5 })
+-- Keybinding editor overlay (firstpick.keybindings): full-screen scrim + centered card.
+hl.layer_rule({ match = { namespace = "omarchy-keybinding-editor" }, blur = true, ignore_alpha = 0.5 })
 -- Lock screen: full-screen blur is the intended lock look.
 hl.layer_rule({ match = { namespace = "omarchy-lock-preview" }, blur = true })
 -- Omasnap capture overlay: no animation, excluded from screen share.
 hl.layer_rule({ match = { namespace = "^omasnap$" }, no_anim = true, animation = "none", no_screen_share = true })
+-- Spotlight 命令面板：全屏 scrim + 居中卡片，只糊卡片本体。
+hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore_alpha = 0.4 })

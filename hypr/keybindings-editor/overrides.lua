@@ -1,0 +1,3 @@
+-- omarchy-keybindings-json: {"additions":[{"category":"Other","command":"omarchy-shell shell toggle firstpick.keybindings","description":"Keybindings","id":"custom-mtpap534-ugsm2cts","keys":"SUPER + SHIFT + K","options":{},"submap":""}],"overrides":{},"version":1}
+-- Managed data. Use the keybinding editor; manual changes are rejected.
+return {["additions"]={{["category"]="Other",["command"]="omarchy-shell shell toggle firstpick.keybindings",["description"]="Keybindings",["id"]="custom-mtpap534-ugsm2cts",["keys"]="SUPER + SHIFT + K",["options"]={},["submap"]=""}},["overrides"]={},["version"]=1}

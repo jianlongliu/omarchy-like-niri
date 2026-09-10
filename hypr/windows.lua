@@ -9,3 +9,11 @@ o.window("org.gnome.Loupe", { opacity = "0.88 0.82" })
 
 -- Don't lock the screen while Zen Browser is open (watching bilibili etc., windowed or fullscreen).
 o.window("zen", { idle_inhibit = "always", opacity = "0.92 0.88" })
+
+-- Chromium: work ticketing system (needs a Windows UA). Match the exact class so
+-- the "zen" rule above never touches it; keep it from locking too.
+o.window("^org\\.chromium\\.Chromium$", { idle_inhibit = "always", opacity = "0.92 0.88" })
+
+-- Glassy flea (Quickshell file manager) so it matches the Omarchy liquid-glass look.
+-- Global decoration.blur is enabled; the lowered opacity lets the blur show through.
+o.window("com.thisisgm.flea", { opacity = "0.92 0.88" })

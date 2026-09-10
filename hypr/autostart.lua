@@ -1,5 +1,6 @@
 -- Extra autostart processes.
 -- o.launch_on_start("my-service")
+o.launch_on_start("activate-linux")
 
 -- Load hyprpm plugins (scrolloverview, etc.) at startup. hyprpm marks plugins
 -- as "enabled" but they are only injected into Hyprland by `hyprpm reload`,
@@ -18,6 +19,7 @@ for i in $(seq 1 50); do
   if hyprctl ping >/dev/null 2>&1; then break; fi
   sleep 0.2
 done
+hyprctl setcursor Bibata-Modern-Amber 30
 hyprpm reload && hyprctl reload
 ]])
 end)

@@ -16,7 +16,7 @@
 -- Thicker window borders (default is 2).
 hl.config({
   general = {
-    border_size = 4,
+    border_size = 5,
   },
 })
 
@@ -30,7 +30,9 @@ hl.config({
       enabled = true,
       size = 8,
       passes = 5,
-      xray = true,
+      -- 关掉 xray：模糊取背后真实内容(含窗口)，不再只糊壁纸。
+      -- 代价是浮动层模糊开销略高，6950 XT 无压力。
+      xray = false,
       vibrancy = 0.5,
       brightness = 1.05,
       contrast = 0.95,
@@ -52,6 +54,12 @@ hl.config({
 -- Vertical slide to match niri's vertical workspace stack.
 hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOutQuint", style = "slidevert" })
 
+-- Smooth fade when switching focus between windows on the SAME workspace
+-- (e.g. Super+Shift+scroll app switching). Omarchy defaults this OFF, so
+-- in-workspace focus changes were a hard cut. NOTE: this is global — it also
+-- fades focus switches via Super+arrows etc.
+hl.animation({ leaf = "fadeSwitch", enabled = true, speed = 5, bezier = "easeOutQuint" })
+
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#layout
 -- hl.config({
 --   layout = {
@@ -67,3 +75,18 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 4, bezier = "easeOut
 --     column_width = 0.97,
 --   },
 -- })
+
+-- BEGIN charlieras262.omablur
+hl.config({
+  decoration = {
+    rounding = 20,
+    blur = {
+      enabled = true,
+      size = 11,
+      passes = 2,
+      new_optimizations = true,
+      ignore_opacity = true,
+    },
+  },
+})
+-- END charlieras262.omablur

@@ -43,8 +43,6 @@ BarWidget {
   readonly property real spacing: dot * 0.5
 
   readonly property color base: root.bar ? root.bar.barForeground : Color.foreground
-  readonly property color dim: Qt.alpha(base, 0.34)
-  readonly property color active: Qt.alpha(base, 0.85)
 
   implicitWidth: row.implicitWidth
   implicitHeight: root.barSize
@@ -61,26 +59,47 @@ BarWidget {
         id: dot
         required property int modelData
 
+        readonly property var workspace: root.workspaceById(modelData)
+        readonly property bool occupied: workspace !== null && workspace.toplevels.values.length > 0
         readonly property bool focused: Hyprland.focusedWorkspace !== null && Hyprland.focusedWorkspace.id === modelData
+        property bool hovered: false
+
+        // 明暗层级:空点 < 有窗口 < 聚焦胶囊;悬停任意点点亮以示可点
+        readonly property color col: focused
+          ? Qt.alpha(root.base, hovered ? 1.0 : 0.9)
+          : hovered
+            ? Qt.alpha(root.base, 0.85)
+            : occupied
+              ? Qt.alpha(root.base, 0.62)
+              : Qt.alpha(root.base, 0.15)
 
         implicitWidth: width
         implicitHeight: height
         width: focused ? root.expanded : root.dot
         height: root.dot
         radius: height / 2
-        color: focused ? root.active : root.dim
+        color: col
 
         Behavior on width {
-          NumberAnimation { duration: 220; easing.type: Easing.InOutCubic }
+          // 展开时轻微过冲回弹(OutBack),收起时快速落定
+          NumberAnimation {
+            duration: 220
+            easing.type: Easing.OutBack
+            easing.overshoot: 1.2
+          }
         }
         Behavior on color {
-          ColorAnimation { duration: 220; easing.type: Easing.InOutCubic }
+          ColorAnimation { duration: 160; easing.type: Easing.InOutCubic }
         }
 
         MouseArea {
+          id: hoverArea
           anchors.fill: parent
+          hoverEnabled: true
           acceptedButtons: Qt.LeftButton
           cursorShape: Qt.ArrowCursor
+          onEntered: dot.hovered = true
+          onExited: dot.hovered = false
           onClicked: function(mouse) { root.focusWorkspace(modelData) }
         }
       }

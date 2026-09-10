@@ -8,6 +8,12 @@ hl.env("XMODIFIERS", "@im=fcitx5")
 hl.env("SDL_IM_MODULE", "fcitx5")
 hl.env("GLFW_IM_MODULE", "ibus")
 
+-- Cursor theme: Bibata Modern Amber (AUR bibata-cursor-theme).
+hl.env("XCURSOR_THEME", "Bibata-Modern-Amber")
+hl.env("HYPRCURSOR_THEME", "Bibata-Modern-Amber")
+hl.env("XCURSOR_SIZE", "30")
+hl.env("HYPRCURSOR_SIZE", "30")
+
 -- gum confirm 选中项用独立文字色，避免默认主题下透明+模糊看不清 Yes/No 选中哪个。
 hl.env("GUM_CONFIRM_SELECTED_FOREGROUND", "#a6e3a1")
 

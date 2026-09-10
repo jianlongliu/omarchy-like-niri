@@ -4,10 +4,15 @@ size-horizontal = 40
 
 [popups]
 background-alpha = 0.58
+# 边框宽度统一到窗口 border_size(与 bar/窗口同款)。颜色走 [popups] border
+# = hyprland.active-border(主题生成,同源渐变)。改窗口边框粗细时同步此处。
+border-width = 5
 
 [menu]
 background-alpha = 0.6
 scrim-alpha = 0.4
+# 边框宽度统一到窗口 border_size(菜单面板边框与窗口/bar 同款)。
+border-width = 5
 
 [launcher]
 background-alpha = 0.6

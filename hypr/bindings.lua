@@ -31,6 +31,12 @@
 hl.unbind("PRINT")
 o.bind("PRINT", "Screenshot", "omasnap")
 o.bind("SUPER + E", nil, "nautilus")
+-- SUPER+F → 带任务栏全屏（maximized），覆盖默认的真全屏。
+hl.unbind("SUPER + F")
+o.bind("SUPER + F", "Maximized (with bar)", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+-- SUPER+CTRL+F → 真全屏（盖状态栏），覆盖默认的 Tiled full screen。
+hl.unbind("SUPER + CTRL + F")
+o.bind("SUPER + CTRL + F", "True fullscreen", hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 -- ScrollOverview: niri-style workspace overview on SUPER+TAB (frees the default
 -- "Next workspace" binding for this). Must use the Lua API, not the
 -- scrolloverview:overview dispatcher string — that path silently no-ops.
@@ -45,14 +51,14 @@ o.bind("SUPER + PAGE_DOWN", "Next workspace", hl.dsp.focus({ workspace = "e+1" }
 hl.unbind("SUPER + W")
 o.bind("SUPER + Q", "Close window", hl.dsp.window.close())
 o.bind("ALT + F4", "Close window", hl.dsp.window.close())
--- Switch apps on Alt+scroll. cycle_next (Alt+Tab) is inherently cyclic and
--- ignores cyclic=false; use spatial focus (like SUPER+arrows) instead, which is
--- non-cyclic — it stops when there's no window in that direction. Overrides the
--- default "Next/Previous window in group" mouse binds; group nav stays on SUPER+ALT+TAB.
-hl.unbind("SUPER + ALT + mouse_down")
-hl.unbind("SUPER + ALT + mouse_up")
-o.bind("ALT + mouse_down", "Focus window right", hl.dsp.focus({ direction = "r" }))
-o.bind("ALT + mouse_up", "Focus window left", hl.dsp.focus({ direction = "l" }))
+-- Switch apps on Super+Shift+scroll. Moved off Alt+scroll because some video
+-- players (esp. in-browser) hijack Alt+wheel as volume. cycle_next is cyclic and
+-- ignores cyclic=false, so use spatial focus (like SUPER+arrows), which is
+-- non-cyclic — it stops when there's no window in that direction.
+hl.unbind("SUPER + SHIFT + mouse_down")
+hl.unbind("SUPER + SHIFT + mouse_up")
+o.bind("SUPER + SHIFT + mouse_down", "Focus window right", hl.dsp.focus({ direction = "r" }))
+o.bind("SUPER + SHIFT + mouse_up", "Focus window left", hl.dsp.focus({ direction = "l" }))
 
 -- ==== Bounded dynamic workspaces on SUPER+scroll (niri-style) ====
 -- Forward (scroll down): move to the next numbered workspace, creating it if
@@ -169,5 +175,6 @@ hl.unbind("SUPER + CTRL + DOWN")
 hl.bind("SUPER + CTRL + UP", move_prev_workspace, { description = "Move window to previous workspace (stop at empty)" })
 hl.bind("SUPER + CTRL + DOWN", move_next_workspace, { description = "Move window to next workspace (stop at empty)" })
 
--- Omarchy Find file search overlay
-o.bind("ALT + SPACE", "Find files & folders", "omarchy-shell shell toggle jesseburlamaque.omarchy-find")
+-- ==== Spotlight (maajix) 命令面板 ====
+-- ALT+SPACE 当前空闲；不用 CTRL+SPACE 是因为与 fcitx5 冲突。
+o.bind("ALT + SPACE", "Spotlight", "omarchy-shell shell toggle io.github.maajix.spotlight '{}'")

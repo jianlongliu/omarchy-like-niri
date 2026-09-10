@@ -1,16 +1,33 @@
 {
   "bar": {
-    "centerAnchor": "jianlongliu.clock",
+    "centerAnchor": "omarchy.clock",
     "layout": {
       "center": [
         {
-          "id": "omarchy.indicators"
+          "id": "jianlongliu.indicators",
+          "items": [
+            "Dictation",
+            "ScreenRecording",
+            "Dnd",
+            "NightLight",
+            "StayAwake"
+          ]
         },
         {
-          "id": "ak.thermals"
+          "id": "omarchy.spacer",
+          "size": 16
         },
         {
-          "id": "jianlongliu.clock"
+          "id": "coding-sparrow.systempulse",
+          "checkConnectivity": true,
+          "compactBar": false,
+          "notifications": true,
+          "showCpu": true,
+          "showGpu": false,
+          "showMem": false
+        },
+        {
+          "id": "omarchy.clock"
         },
         {
           "id": "jianlongliu.keyboard-layout"
@@ -33,40 +50,23 @@
       ],
       "left": [
         {
-          "id": "jianlongliu.menu"
+          "id": "jianlongliu.arch-logo"
         },
         {
           "id": "jianlongliu.workspaces"
         },
         {
-          "id": "io.github.majesticio.clipboard-button"
-        },
-        {
-          "id": "local.opencode-go-usage"
-        },
-        {
           "id": "omarchy.active-window"
+        },
+        {
+          "id": "meviusisback.ai-subs",
+          "barDisplay": "Data",
+          "defaultSub": "opencode"
         }
       ],
       "right": [
         {
           "id": "omarchy.agents"
-        },
-        {
-          "id": "omarchy.tray",
-          "pinned": [],
-          "hidden": [
-            "Fcitx"
-          ]
-        },
-        {
-          "id": "io.github.xgborgeso.peripheral-batteries"
-        },
-        {
-          "id": "io.github.sahzudin.omarchy-screenshot-manager"
-        },
-        {
-          "id": "io.github.lijiawei0305-pixel.mihomo"
         },
         {
           "id": "srozen.ufw"
@@ -75,17 +75,27 @@
           "id": "omarchy.microphone"
         },
         {
-          "id": "jesseburlamaque.omarchy-find"
+          "id": "io.github.majesticio.clipboard-button"
         },
         {
-          "id": "halmylyseas.github-status"
+          "id": "charlieras262.omablur"
+        },
+        {
+          "id": "io.github.sahzudin.omarchy-screenshot-manager"
         },
         {
           "id": "jrmmhm.pocket",
-          "members": "io.github.sahzudin.omarchy-screenshot-manager, io.github.lijiawei0305-pixel.mihomo, srozen.ufw, omarchy.microphone, jesseburlamaque.omarchy-find, halmylyseas.github-status"
+          "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, charlieras262.omablur, io.github.sahzudin.omarchy-screenshot-manager"
         },
         {
-          "id": "community.cn-input"
+          "id": "omarchy.tray",
+          "hidden": [
+            "Fcitx"
+          ]
+        },
+        {
+          "id": "ronald.input-sources",
+          "showSourceName": false
         },
         {
           "id": "omarchy.bluetooth"
@@ -98,12 +108,6 @@
         },
         {
           "id": "omarchy.monitor"
-        },
-        {
-          "id": "abran-labs.notification-center"
-        },
-        {
-          "id": "dizziee.power-profiles"
         },
         {
           "id": "omarchy-system-menu"
@@ -131,16 +135,25 @@
     },
     {
       "id": "abdul.hotcorners"
+    },
+    {
+      "id": "io.github.ellion369.omagent"
+    },
+    {
+      "id": "jianlongliu.osd"
+    },
+    {
+      "id": "io.github.maajix.spotlight"
     }
   ],
   "version": 1,
   "disabledPlugins": [
     "omarchy.lock",
     "omarchy.nightlight",
-    "omarchy.menu"
+    "omarchy.osd"
   ],
   "cloneSourceRestores": [
     "io.github.sirjul1337.lock-explorer",
-    "jianlongliu.menu"
+    "jianlongliu.osd"
   ]
 }

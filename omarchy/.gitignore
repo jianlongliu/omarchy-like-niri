@@ -11,6 +11,7 @@ plugins/*
 *.bak
 *.bak.*
 *.bak.*[0-9]
+*.flat.*
 **/backups/
 
 # 日志
@@ -20,3 +21,9 @@ plugins/*
 backgrounds/
 avatar.png
 avatar_circle.png
+
+# 私人锁屏素材（不进公开仓库）
+# 注意：lock-avatar.png 例外——它是本仓库**有意收录的样例**（见 README），
+# 已跟踪，gitignore 不影响已跟踪文件。仅用于表示"本机私有的同名文件不进仓库"。
+lock-avatar.png
+lock-videos/

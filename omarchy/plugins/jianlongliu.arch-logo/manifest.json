@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "jianlongliu.arch-logo",
+  "name": "Arch Logo Menu",
+  "version": "1.0.0",
+  "author": "jianlongliu",
+  "description": "Arch logo button that opens the stock Omarchy menu",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Arch Logo Menu",
+    "description": "Arch logo; click opens the Omarchy menu",
+    "category": "Compositor",
+    "defaultSection": "left",
+    "allowMultiple": false
+  }
+}
