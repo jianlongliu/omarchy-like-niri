@@ -42,7 +42,7 @@ hyprpm enable scrolloverview
 ```
 
 > 插件用仓库**默认分支**即可。若插件编译/加载因 Hyprland 版本不匹配失败，用 `hyprpm add <url> <git-rev>` 锁定适配你 Hyprland 版本的提交——先用默认、失败再锁 rev。
-> ⚠️ 但**依赖 ABI 类不匹配锁 rev 躲不过（2026-09-10 实测）**：Hyprland 包重编译只换依赖版本、commit 不变时（如 0.56.2-2 rebuild with aquamarine-0.15.0），hyprpm 仍拿过期的 `headersRoot` 快照重编，插件加载抛 `[he] Version mismatch` 且 hyprpm 打印假成功（以 `hyprctl plugins list` 为准）。完整根因+无 sudo 修复见本机笔记（未随本仓库发布）的「hyprpm 版本错配」节：手动 make 编译 .so 顶替 `/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/` 下同名文件即可。
+> ⚠️ 但**依赖 ABI 类不匹配锁 rev 躲不过（2026-09-10 实测）**：Hyprland 包重编译只换依赖版本、commit 不变时（如 0.56.2-2 rebuild with aquamarine-0.15.0），hyprpm 仍拿过期的 `headersRoot` 快照重编，插件加载抛 `[he] Version mismatch` 且 hyprpm 打印假成功（以 `hyprctl plugins list` 为准）。完整根因+无 sudo 修复见 本地笔记的「hyprpm 版本错配」节：手动 make 编译 .so 顶替 `/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/` 下同名文件即可。
 > 验证：`hyprpm add` 还可追加 `[git rev]` 参数（见 `hyprpm --help`）。
 
 验证已加载：`hyprctl plugins list` 应含 `Plugin scrolloverview`；`hyprpm list` 里 `scrolloverview enabled: true`。
@@ -342,10 +342,10 @@ scrolloverview 是 **Hyprland 原生插件**（yayuuu/hyprland-scroll-overview�
 > 以下为原部署机的实施细节与历史，仅供排查/复刻参考，不随通用教程迁移。
 
 - **原 Hyprland 版本**：0.56.2（tag 版）。插件仓库 `hyprland-scroll-overview`(yayuuu) 当时 commit `5e96ae20ec73`（`/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/state.toml` 可查）。换机器以你实际版本为准。
-- **本机工作区指示器**：克隆 `omarchy.workspaces` → `jianlongliu.workspaces`（GNOME 45 圆点/胶囊），见本机笔记（未随本仓库发布）。
-- **本机 bar 菜单**：出厂 `omarchy.menu`（面板仍由 `keepLoaded` 挂载，apps 正常），bar 上的按钮换成自建插件 `jianlongliu.arch-logo`（Arch logo 染成前景色），见本机笔记（未随本仓库发布）。
+- **本机工作区指示器**：克隆 `omarchy.workspaces` → `jianlongliu.workspaces`（GNOME 45 圆点/胶囊），见 `omarchy-visual-tweaks.md` §3.1。
+- **本机 bar 菜单**：出厂 `omarchy.menu`（面板仍由 `keepLoaded` 挂载，apps 正常），bar 上的按钮换成自建插件 `jianlongliu.arch-logo`（Arch logo 染成前景色），见 `omarchy-visual-tweaks.md` §4.1。
 - **角落热区**：曾自研 Hyprland 插件 `hyprcorner`，**已删除且不恢复**，现用第三方 `abdul.hotcorners`（macOS 风格，rest pointer 触发命令，可配四角动作触发 scrolloverview 总览）。
 - **历史**：曾装 `io.github.sirmenef.workspace-overview`，已移除（Super+Grave 绑定一并删除），总览只保留 scrolloverview。
-- 克隆插件的命名与 centerAnchor 隐患见本机笔记（未随本仓库发布）。
+- 克隆插件的命名与 centerAnchor 隐患见 `omarchy-visual-tweaks.md` 〇(公共前置)与 §2。
 - **通知/勿扰**：系统 `omarchy.notifications` 启用，bar 中央 `jianlongliu.indicators` 一排 5 颗，其 Dnd 铃铛直接绑系统通知服务做唯一勿扰入口。
-- **bar 中央 indicators 字号**：6 个 indicator 字号统一 `Style.bar.iconFont`（原基类缩到 caption 偏小），见本机笔记（未随本仓库发布）（含克隆插件清单）。
+- **bar 中央 indicators 字号**：6 个 indicator 字号统一 `Style.bar.iconFont`（原基类缩到 caption 偏小），见 `omarchy-visual-tweaks.md` §1；克隆插件清单见 `omarchy-plugins.md`。

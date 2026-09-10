@@ -10,12 +10,17 @@
 omarchy-like-niri/
 ├── hypr/       Hyprland 配置（~/.config/hypr）
 ├── omarchy/    Omarchy 配置 + 自改克隆插件（~/.config/omarchy）
-└── docs/       niri 化安装教程（omarchy-nirification.md）
+└── docs/       niri 化教程 + bar 视觉/插件参考
 ```
 
 - **`hypr/`**：ScrollOverview 插件、`workspaces` 纵向动画、niri 化快捷键、有界工作区/移窗函数。
 - **`omarchy/`**：shell 配置 + 自改 `jianlongliu.*` 插件（克隆：osd / keyboard-layout / system-update / workspaces / indicators；自建：arch-logo）。
-- **`docs/`**：完整可移植教程，含分步安装（每步带验证/回退）与注意事项。
+- **`docs/`**：
+  | 文档 | 内容 |
+  | --- | --- |
+  | [`omarchy-nirification.md`](docs/omarchy-nirification.md) | niri 化安装教程（分步，每步带验证/回退）——**从这里开始** |
+  | [`omarchy-visual-tweaks.md`](docs/omarchy-visual-tweaks.md) | bar 视觉定制：字号/对齐、磨砂玻璃与 layer rule、工作区胶囊、全局字体链、Gnome 风锁屏/SDDM 壁纸同步 |
+  | [`omarchy-plugins.md`](docs/omarchy-plugins.md) | 插件清单与管理命令（按真实 `shell.json` 同步）+ 改第三方插件源码的本地补丁记录 |
 
 > 克隆插件位于用户目录 `~/.config/omarchy/plugins/`，不在系统包内，`omarchy update` **不会覆盖**它们。纳入 git 是用于**版本回退 + 备份/迁移**，并非防 update 覆盖（那本就不需要）。
 
