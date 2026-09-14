@@ -17,3 +17,18 @@ o.window("^org\\.chromium\\.Chromium$", { idle_inhibit = "always", opacity = "0.
 -- Glassy flea (Quickshell file manager) so it matches the Omarchy liquid-glass look.
 -- Global decoration.blur is enabled; the lowered opacity lets the blur show through.
 o.window("com.thisisgm.flea", { opacity = "0.92 0.88" })
+
+-- yazi (SUPER+Y) and btop (CTRL+SHIFT+ESCAPE): float, centered, roomy.
+-- Omarchy hands btop the "floating-window" tag, whose 875x600 is too cramped for
+-- a TUI (btop loses its columns, yazi its preview pane). The tag's rules are
+-- applied as *dynamic* rules — after every static rule — so a later plain
+-- `size` override loses to them. Hence: opt out of the tag and restate
+-- float/center/size here instead of editing the shared tag (dialogs and file
+-- pickers reuse it and want the small default).
+o.window("^(org\\.omarchy\\.btop|org\\.omarchy\\.yazi)$", {
+  tag = "-floating-window",
+  float = true,
+  center = true,
+  size = { 1280, 800 },
+})
+o.window("org.omarchy.yazi", { opacity = "0.92 0.88"})

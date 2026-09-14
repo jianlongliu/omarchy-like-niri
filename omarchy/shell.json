@@ -27,10 +27,10 @@
           "showMem": false
         },
         {
-          "id": "omarchy.clock"
+          "id": "jianlongliu.keyboard-layout"
         },
         {
-          "id": "jianlongliu.keyboard-layout"
+          "id": "omarchy.clock"
         },
         {
           "id": "omarchy.weather"
@@ -85,13 +85,16 @@
         },
         {
           "id": "jrmmhm.pocket",
-          "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, charlieras262.omablur, io.github.sahzudin.omarchy-screenshot-manager"
+          "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, charlieras262.omablur, io.github.sahzudin.omarchy-screenshot-manager, io.github.lijiawei0305-pixel.mihomo"
         },
         {
           "id": "omarchy.tray",
           "hidden": [
             "Fcitx"
           ]
+        },
+        {
+          "id": "skoom.beszel"
         },
         {
           "id": "ronald.input-sources",

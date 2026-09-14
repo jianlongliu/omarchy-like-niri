@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 
@@ -20,15 +22,30 @@ BarWidget {
   }
 
   function workspaceIds() {
-    var ids = [1, 2, 3]
+    var ids = []
     var values = Hyprland.workspaces.values
+    var focused = Hyprland.focusedWorkspace
+    var focusId = focused !== null && focused.id > 0 ? focused.id : 0
 
+    // 只上屏"有窗口的工作区"和"当前工作区"。
+    // 空工作区(Hyprland 不会自动回收)不占位,否则中间会挂着一串暗点。
     for (var i = 0; i < values.length; i++) {
-      var id = values[i].id
-      if (id > 0 && id <= 10 && ids.indexOf(id) === -1) ids.push(id)
+      var ws = values[i]
+      if (ws.id <= 0) continue
+      if (ws.toplevels.values.length > 0 || ws.id === focusId) ids.push(ws.id)
     }
 
+    if (focusId > 0 && ids.indexOf(focusId) === -1) ids.push(focusId)
+    if (ids.length === 0) ids.push(1)
+
     ids.sort(function(left, right) { return left - right })
+
+    // GNOME 惯例:末尾补一个空槽代表"下一个工作区",点击即新建。
+    // 空槽只会出现在末尾,除非用户在别的空工作区里,否则就是列表最后一个。
+    var lastWs = workspaceById(ids[ids.length - 1])
+    var lastOccupied = lastWs !== null && lastWs.toplevels.values.length > 0
+    if (lastOccupied) ids.push(ids[ids.length - 1] + 1)
+
     return ids
   }
 
@@ -44,7 +61,18 @@ BarWidget {
 
   readonly property color base: root.bar ? root.bar.barForeground : Color.foreground
 
-  implicitWidth: row.implicitWidth
+  // bar 上的模块是零间距紧挨着排的(Row { spacing: 0 }),模块之间的空隙
+  // 全靠各个 widget 自己的内边距。胶囊右边紧挨着 omarchy.active-window:
+  // 有窗口时它自己带左边距,胶囊不必再留;切到空白工作区时它会整块收起、
+  // 宽度归零,后面的模块就会直接贴到胶囊上。所以只在那一种情况下由胶囊
+  // 自己补一段等宽留白,让两种情况下的间隔看起来一致。
+  // 判定条件与 active-window 的 visible 保持一致,否则两边会不同步。
+  readonly property var activeToplevel: ToplevelManager.activeToplevel
+  readonly property bool windowTitleShowing: !root.vertical && activeToplevel !== null
+    && (activeToplevel.title || activeToplevel.appId || "") !== ""
+  readonly property real trailingGap: root.windowTitleShowing ? 0 : Style.space(8)
+
+  implicitWidth: row.implicitWidth + root.trailingGap
   implicitHeight: root.barSize
 
   Row {

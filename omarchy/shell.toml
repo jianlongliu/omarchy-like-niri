@@ -6,13 +6,17 @@ size-horizontal = 40
 background-alpha = 0.58
 # 边框宽度统一到窗口 border_size(与 bar/窗口同款)。颜色走 [popups] border
 # = hyprland.active-border(主题生成,同源渐变)。改窗口边框粗细时同步此处。
-border-width = 5
+border-width = 4
 
 [menu]
-background-alpha = 0.6
-scrim-alpha = 0.4
+# 卡片色不再写死：theme 渲染时取 colors.toml 的 lighter_background(比 background 亮两档)，
+# 随壁纸自动走。落在用户模板 ~/.config/omarchy/themed/shell.toml.tpl。
+# 见（本地笔记存档） §3.4。
+background-alpha = 0.9
+# scrim=0：菜单打开时不再压暗整屏。关闭用的 MouseArea 是独立一层(Menu.qml:1050)，不受影响。
+scrim-alpha = 0
 # 边框宽度统一到窗口 border_size(菜单面板边框与窗口/bar 同款)。
-border-width = 5
+border-width = 4
 
 [launcher]
 background-alpha = 0.6

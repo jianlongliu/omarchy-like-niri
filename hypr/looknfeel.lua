@@ -16,7 +16,7 @@
 -- Thicker window borders (default is 2).
 hl.config({
   general = {
-    border_size = 5,
+    border_size = 4,
   },
 })
 
@@ -30,8 +30,6 @@ hl.config({
       enabled = true,
       size = 8,
       passes = 5,
-      -- 关掉 xray：模糊取背后真实内容(含窗口)，不再只糊壁纸。
-      -- 代价是浮动层模糊开销略高，6950 XT 无压力。
       xray = false,
       vibrancy = 0.5,
       brightness = 1.05,

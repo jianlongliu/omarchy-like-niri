@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# theme-set hook: 把主题渲染出的 GTK 配色同步到 GTK4 / GTK3 的读取路径。
+# 为什么用 cp 而不是软链：GTK 靠文件监视器盯着这两个路径，换主题时 omarchy 是
+# rm -rf + mv 换掉整个 theme 目录，目标 inode 会变；直接覆盖成真实文件能保证
+# 监视器触发、已开窗口即时换色，也免了软链失效的隐患。
+set -u
+
+# GTK4 用 @define-color（语义变量），GTK3 只能用选择器 —— 两个模板分开写。
+sync_one() {
+  local src="$HOME/.local/state/omarchy/current/theme/$1"
+  local dst="$2"
+  # 主题没渲染出该文件（非 materal 主题 / 模板缺失）就跳过，不动现有配置
+  [[ -f "$src" ]] || return 0
+  mkdir -p "$(dirname "$dst")"
+  if [[ -L "$dst" ]]; then rm -f "$dst"; fi
+  cp -f "$src" "$dst"
+}
+
+sync_one gtk.css  "$HOME/.config/gtk-4.0/gtk.css"
+sync_one gtk3.css "$HOME/.config/gtk-3.0/gtk.css"

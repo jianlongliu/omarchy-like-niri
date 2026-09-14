@@ -30,6 +30,8 @@
 -- Replace the default PRINT screenshot with omasnap (added by Ante).
 hl.unbind("PRINT")
 o.bind("PRINT", "Screenshot", "omasnap")
+-- 直连系统 nautilus：原来的 ~/.local/bin/nautilus 包装脚本只为注入
+-- GTK_THEME=Catppuccin（写死配色），已废；配色改由 omarchy 主题模板驱动。
 o.bind("SUPER + E", nil, "nautilus")
 -- SUPER+F → 带任务栏全屏（maximized），覆盖默认的真全屏。
 hl.unbind("SUPER + F")
@@ -83,7 +85,13 @@ local function table_value(value, ...)
   return nil
 end
 
--- Return { id, windows } for the workspace focused on the cursor's monitor.
+-- Workspace range reserved for the main monitor. The portable display
+-- (HDMI-A-1) is pinned to workspace 6 for video, so every scroll/move bind
+-- below is scoped to this range and only acts when the cursor is on DP-2.
+local MAIN_MONITOR = "DP-2"
+local MAIN_WS_MIN, MAIN_WS_MAX = 1, 3
+
+-- Return { id, windows, monitor } for the workspace focused on the cursor's monitor.
 local function current_workspace()
   local ok, monitor = pcall(function() return hl.get_monitor_at_cursor() end)
   if not ok or not monitor then
@@ -100,12 +108,12 @@ local function current_workspace()
   end
 
   local windows = table_value(active, "windows")
-  return { id = id, windows = windows or 0 }
+  return { id = id, windows = windows or 0, monitor = table_value(monitor, "name") }
 end
 
 local function scroll_next_workspace()
   local current = current_workspace()
-  if not current then
+  if not current or current.monitor ~= MAIN_MONITOR then
     return
   end
 
@@ -114,21 +122,31 @@ local function scroll_next_workspace()
     return
   end
 
+  -- Stay inside the main monitor's range so focus never jumps to the
+  -- portable display, which owns workspace 6.
+  if current.id >= MAIN_WS_MAX then
+    return
+  end
+
   hl.dispatch(hl.dsp.focus({ workspace = tostring(current.id + 1) }))
 end
 
 local function scroll_prev_workspace()
   local current = current_workspace()
-  if not current then
+  if not current or current.monitor ~= MAIN_MONITOR then
     return
   end
 
-  -- Never go below workspace 1.
-  if current.id <= 1 then
+  -- Never go below the first workspace of the range.
+  if current.id <= MAIN_WS_MIN then
     return
   end
 
-  hl.dispatch(hl.dsp.focus({ workspace = tostring(current.id - 1) }))
+  -- A workspace above the range (e.g. created with SUPER+7) must not step
+  -- down onto the portable display's pinned workspace 6: clamp back into the
+  -- range instead, so focus never leaves this monitor.
+  local target = math.min(current.id - 1, MAIN_WS_MAX)
+  hl.dispatch(hl.dsp.focus({ workspace = tostring(target) }))
 end
 
 -- Replace the default SUPER+scroll workspace bindings with the bounded versions.
@@ -145,29 +163,32 @@ hl.bind("SUPER + mouse_up", scroll_prev_workspace, { description = "Previous wor
 -- scroll bound above (which stops on current-windows == 0).
 local function move_next_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then
+  if not current or current.monitor ~= MAIN_MONITOR or current.windows == 0 then
     return
   end
 
-  if current.windows > 1 then
+  if current.windows > 1 and current.id < MAIN_WS_MAX then
     hl.dispatch(hl.dsp.window.move({ workspace = tostring(current.id + 1) }))
   end
 end
 
 local function move_prev_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then
+  if not current or current.monitor ~= MAIN_MONITOR or current.windows == 0 then
     return
   end
 
-  -- Never go below workspace 1 (rule A: no workspace 0 / negatives). The
-  -- backward direction is intentionally NOT window-count-bounded so a window
-  -- pushed out to a far workspace can always be brought back home.
-  if current.id <= 1 then
+  -- Never go below the first workspace of the range (rule A: no workspace 0 /
+  -- negatives). The backward direction is intentionally NOT window-count-bounded
+  -- so a window pushed out to a far workspace can always be brought back home.
+  -- Clamped at the top for the same reason as scroll_prev_workspace: stepping
+  -- down from an out-of-range workspace would land on the other monitor.
+  if current.id <= MAIN_WS_MIN then
     return
   end
 
-  hl.dispatch(hl.dsp.window.move({ workspace = tostring(current.id - 1) }))
+  local target = math.min(current.id - 1, MAIN_WS_MAX)
+  hl.dispatch(hl.dsp.window.move({ workspace = tostring(target) }))
 end
 
 hl.unbind("SUPER + CTRL + UP")
@@ -178,3 +199,29 @@ hl.bind("SUPER + CTRL + DOWN", move_next_workspace, { description = "Move window
 -- ==== Spotlight (maajix) 命令面板 ====
 -- ALT+SPACE 当前空闲；不用 CTRL+SPACE 是因为与 fcitx5 冲突。
 o.bind("ALT + SPACE", "Spotlight", "omarchy-shell shell toggle io.github.maajix.spotlight '{}'")
+
+-- ==== Windows 风格快捷键 ====
+-- CTRL+ALT+DELETE → 系统菜单（出厂是 "Close all windows"，见 tiling.lua）。
+-- 走 Omarchy 那套：纯 Hyprland 绑定，不去 mask 内核。注意内核 VT 键表里
+-- `control alt keycode 111 = Boot`，VT 层不区分图形模式 → 按下会同时给 PID 1 发
+-- SIGINT → systemd 的 ctrl-alt-del.target（= reboot.target）→ 机器重启。
+hl.unbind("CTRL + ALT + DELETE")
+o.bind("CTRL + ALT + DELETE", "System menu", "omarchy-menu toggle system")
+-- CTRL+SHIFT+ESCAPE → btop（已开则聚焦旧窗口）。原为此键空闲。
+o.bind("CTRL + SHIFT + ESCAPE", "btop", "omarchy-launch-or-focus-tui btop")
+-- SUPER+Y → yazi（原为此键空闲；SUPER+SHIFT+Y 仍是 YouTube，未动）。
+-- 用 Omarchy 的 TUI 助手：app-id = org.omarchy.yazi，再按一次会聚焦已开的窗口。
+-- 注意它不在 system.lua 的浮动名单里，所以是平铺窗口（和 btop 的浮动不同）。
+o.bind("SUPER + Y", "Yazi", { tui = "yazi", focus = true })
+-- SUPER+Z → Zen 浏览器（原为此键空闲；只有 SUPER+CTRL+Z=Zoom in、
+-- SUPER+CTRL+ALT+Z=Reset zoom 占用了 Z，纯 SUPER+Z 无冲突）。
+-- 走 Omarchy 通道读 xdg-settings 默认浏览器（本机 = zen.desktop），
+-- 换默认浏览器这里自动跟着变，不写死 zen。私密窗口是 SUPER+SHIFT+ALT+B。
+o.bind("SUPER + Z", "Browser", { omarchy = "browser" })
+-- SUPER+L → 锁屏（出厂是 CTRL+SUPER+L，太长）。SUPER+L 原本是
+-- "Toggle workspace layout"（dwindle/滚动布局切换），被这条征用。
+hl.unbind("SUPER + L")
+o.bind("SUPER + L", "Lock system", "omarchy-system-lock")
+-- 布局切换随后挪到 CTRL+SUPER+L（原来是锁屏），与上面互换。
+hl.unbind("SUPER + CTRL + L")
+o.bind("SUPER + CTRL + L", "Toggle workspace layout", "omarchy-hyprland-workspace-layout-toggle")

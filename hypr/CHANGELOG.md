@@ -2,6 +2,15 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-15 — 便携屏接入、工作区滚动限定主屏、btop/yazi 浮窗、边框 4
+- **monitors: 便携屏接入**：`HDMI-A-1`（BOE 2560x1600@120）放 DP-2 **左侧** `-1600x0`（scale 1.6 → 逻辑宽 1600，与 DP-2 的 `0..2400` 正好接壤）；DP-2 由 `3840x2160@144` 改 `@120` 并固定 `position = "0x0"`（原 `auto`）。**为什么**：两屏逻辑矩形必须接壤鼠标才跨得过去，留缝会卡在中间。
+- **monitors: `ws6` 钉在便携屏**（`hl.workspace_rule`）——看片专用，其余工作区留给主屏。
+- **bindings: 工作区滚动/移动限定主屏 1–3 并加边界 clamp**：Hyprland 工作区 ID **全局唯一且绑定在各自屏上**，`focus({workspace=N})` 的语义是"去 N 所在的那块屏"而非"当前屏切到 N"，不设范围就会跨屏或抢走别屏的工作区号（已实测原生 `focus({workspace="r+1"/"r-1"})` 是相对本屏、不跨屏，但仍会吃掉别屏的号且无边界，故改用显式 `MAIN_WS_MIN/MAX` + clamp）。
+- **bindings: `SUPER+E` 直连 `nautilus`**：原 wrapper `~/.local/bin/nautilus` 只为注入 `GTK_THEME=Catppuccin`，随 GTK 配色改由主题模板驱动而废弃。**为什么非改不可**：绑定直指被删的脚本路径，不改会按键静默失效。
+- **bindings: 补 Windows 风格快捷键 `CTRL+ALT+DELETE → 系统菜单`**（出厂此项是 Close all windows）。
+- **windows: `btop`/`yazi` 脱 `floating-window` 标签、自定 1280×800 居中浮窗**：omarchy 给的 875×600 对 TUI 太挤（btop 丢列、yazi 丢预览）；该标签尺寸以**动态规则**形式后套，普通静态 `size` 压不过 → 先 `tag = "-floating-window"` 脱标签再重述 `float`/`center`/`size`（共享该标签的对话框、文件选择器保持小尺寸不变）。`yazi` 另加 `opacity 0.92 0.88` 配合全局 blur。
+- **looknfeel: 边框 5 → 4**。
+
 ## 2026-09-11
 - **looknfeel: 关 blur `xray`**（true → false）：模糊改为取背后真实内容（含窗口），不再只糊壁纸。代价是浮动层模糊开销略高，6950 XT 无压力。
 - **looknfeel: 加 `fadeSwitch` 动画**（`speed=5, easeOutQuint`）：同工作区内切换焦点（如 Super+Shift+滚轮切应用）原是硬切，现平滑淡入。注意这是**全局**的——Super+方向键切焦点同样生效。Omarchy 默认此项关闭。
@@ -20,7 +29,7 @@
 
 ## 2026-08-30
 - **cursor**: 系统光标换 Bibata-Modern-Amber（琥珀色），尺寸 30。`envs.lua` 设 `XCURSOR_THEME`/`HYPRCURSOR_THEME`/`XCURSOR_SIZE`/`HYPRCURSOR_SIZE`（GTK/XWayland 应用读）；`autostart.lua` 加 `hyprctl setcursor Bibata-Modern-Amber 30`（Hyprland 自身光标）。Omarchy 默认只设尺寸不设主题名，故补 `*_THEME`。详见（本地笔记存档）。
-- **zen**: `windows.lua` 给 zen 加 `opacity 0.92 0.88` 实现毛玻璃透壁纸；`idle_inhibit` 保持看视频（bilibili）不锁屏。改动理由：Firefox Wayland 单 surface 无法 CSS 局部透明，只能整窗 opacity + userChrome 全透明（本地笔记存档）。
+- **zen**: `windows.lua` 给 zen 加 `opacity 0.92 0.88` 实现毛玻璃透壁纸；`idle_inhibit` 保持看视频（bilibili）不锁屏。改动理由：Firefox Wayland 单 surface 无法 CSS 局部透明，只能整窗 opacity + userChrome 全透明（详见（本地笔记存档））。
 
 ## 2026-08-28
 - **workspace-overview 移除**: 删掉 `io.github.sirmenef.workspace-overview` 绑定（Super+GRAVE），总览只保留 niri 化 scrolloverview 一套，避免两套总览互扰。

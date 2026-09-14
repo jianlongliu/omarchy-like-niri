@@ -2,6 +2,12 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-15 — shell.json 从 refresh 备份还原、GTK3 配色接线、三个自建 bar-widget
+- **`shell.json` 还原**：误触 `omarchy refresh shell` 把 bar 布局重置回出厂。它只重置 `shell.json`（`omarchy-refresh-config omarchy/shell.json` + `omarchy-bar defaults` + `omarchy-restart-shell`），**`shell.toml` / hypr 配置 / 主题色都没被碰**；重置前那份自动留成 `shell.json.bak.<unix>`，按体积认出真身（出厂默认 1191 B vs 本机 3349 B）覆盖回来即复原。副作用是出厂插件重新启用、`jianlongliu.*` 全落回 disabled——因为非 first-party 必须被 `bar.layout`/`plugins` 引用才算启用。救援流程见 `omarchy-plugins.md` §8.3。
+- **GTK3 配色接线**（此前只有 GTK4）：新增 `themed/gtk3.css.tpl`，**全走显式选择器**——GTK3 里 `@define-color` 压不过主题；另需 ① 显式 `background-image: none` 才能盖住 Adwaita 的渐变、② 焦点环/选中标签下划线是 `box-shadow` 画的，要**同形覆盖**否则留蓝环、③ `.gtkstyle-fallback:selected` 与 `treeview.view header button` 这类高优先级硬编码蓝要单独压。`hooks/theme-set.d/gtk-colors-sync` 扩成同步两份（`gtk.css`→`~/.config/gtk-4.0/`、`gtk3.css`→`~/.config/gtk-3.0/`），且**模板缺失就跳过**、不清空现有配置。实测 `evince` 已按主题上色（headerbar `#30282b`、内容区 `#130c0f`），stderr 无 `Theme parsing error`。
+- **新增三个自建 bar-widget**：`plugins/jianlongliu.audio` / `.bluetooth` / `.network`（各自 `manifest.json` + `Model.js` + `Panel.qml`，**无 `clonedFrom`**），当前均 disabled、未进 bar 布局。
+- **一并对齐本机现状**：`themed/shell.toml.tpl`、`themes/tonal-spot/colors.toml`、`plugins/jianlongliu.workspaces/Workspaces.qml`、`branding/screensaver.txt`、`shell.toml`。
+
 ## 2026-09-11 — bar 左上角改 Arch logo（自建插件，非 clone）
 - **新增 `plugins/jianlongliu.arch-logo/`**：纯 `bar-widget` kind 的自建插件（`manifest.json` + `BarWidget.qml` + `arch-logo.svg`），**不带 `omarchy.clonedFrom`**，因此不连累任何源插件。`shell.json` 的 `bar.layout.left` 首项由 `omarchy.menu` 改为 `jianlongliu.arch-logo`。
 - **为什么不用 clone**：菜单插件 kind 是 `["menu","bar-widget"]`，而 registry 对**带非 bar-widget kind 的克隆**会自动把源插件写进 `disabledPlugins`（`PluginRegistry.qml:548`，克隆即替代）。克隆菜单会让出厂 `omarchy.menu` 被禁，只剩克隆那份面板，而其 Apps 分类因 scoped 注入缺陷恒为空 → 死路。故**按钮与面板拆开**：面板继续用出厂（靠 manifest `keepLoaded: true` 常驻挂载，不在 bar 布局也在跑），bar 按钮换成自建纯 bar-widget 插件。
@@ -21,7 +27,7 @@
 - **keyd（输入法 Shift 切换）不属本仓库**：systemd unit 坏链重建见（本地笔记存档）。
 
 ## 2026-09-10
-- **Liquid Glass 修复（blur 恢复）**: Omablur blur 开关恢复正常工作。根因：Omablur 上游 v1.4.0+（`bf8b25d` security 提交）移除自动 patch 脚本，`Style.shellOpacity` 需手动注入系统 4 文件，4.0.3 后未注入→ `typeof` 防御静默降级→ blur 只作用于窗口圆角。**方案 A 全套 patch 4 个系统文件**（`Style.qml` / `KeyboardPanel.qml` / `NotificationCard.qml` / `Menu.qml`，pkexec root 操作，备份 `/tmp/opencode/omablur-patch-backup/`）。效果：blur 开=全 shell 0.62 半透明透出模糊壁纸，关=不透明。⚠️ `omarchy update` 覆盖系统文件会静默还原，需重打（详见 `omarchy-visual-tweaks.md` §3.3）。
+- **Liquid Glass 修复（blur 恢复）**: Omablur blur 开关恢复正常工作。根因：Omablur 上游 v1.4.0+（`bf8b25d` security 提交）移除自动 patch 脚本，`Style.shellOpacity` 需手动注入系统 4 文件，4.0.3 后未注入→ `typeof` 防御静默降级→ blur 只作用于窗口圆角。**方案 A 全套 patch 4 个系统文件**（`Style.qml` / `KeyboardPanel.qml` / `NotificationCard.qml` / `Menu.qml`，pkexec root 操作，备份（临时目录）。效果：blur 开=全 shell 0.62 半透明透出模糊壁纸，关=不透明。⚠️ `omarchy update` 覆盖系统文件会静默还原，需重打（详见 `omarchy-visual-tweaks.md` §3.3）。
 - **遗留定制入库**（`f68daca`）: avatar 悬停 1.15× 放大动画、菜单 7 处 `textFormat: Text.PlainText` 加固、主题粉→蓝黑 + 五彩琉璃渐变活跃边框、DND 铃铛绑系统通知说明。至此全部真实定制已跟踪。
 - **启动报错全排查（shell 日志 ERR/WARN → 0）**: 4 项修复，详见（本地笔记存档）：
   - `lock-explorer` boot 预览图 60 条 Cannot open → 跑 `plymouth/previews.sh` 生成 9 张缩略图（0 条）
@@ -37,5 +43,5 @@
 
 ## 2026-08-30
 - **git rice**: 建立独立 git 仓库，纳入配置 + 自改 `jianlongliu.*` 插件；`.gitignore` 排除第三方插件嵌套 git 与 `.bak` 备份。首次提交 `59f4a4b`。
-- **osd**: 克隆 `omarchy.osd` → `jianlongliu.osd`，改成卡片大小 surface（居中贴底、半透明），绕开全屏透明 layer 的 ignore_alpha 失效（本地笔记存档）。
+- **osd**: 克隆 `omarchy.osd` → `jianlongliu.osd`，改成卡片大小 surface（居中贴底、半透明），绕开全屏透明 layer 的 ignore_alpha 失效（详见（本地笔记存档））。
 - **hyprcorner**: 移除自研角落热区插件，改第三方 `abdul.hotcorners`。
