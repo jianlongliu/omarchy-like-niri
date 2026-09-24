@@ -61,7 +61,8 @@
         {
           "id": "meviusisback.ai-subs",
           "barDisplay": "Data",
-          "defaultSub": "opencode"
+          "hermesEnvFile": "~/.zshenv",
+          "defaultSub": "commandcode"
         }
       ],
       "right": [
@@ -78,23 +79,17 @@
           "id": "io.github.majesticio.clipboard-button"
         },
         {
-          "id": "charlieras262.omablur"
-        },
-        {
           "id": "io.github.sahzudin.omarchy-screenshot-manager"
         },
         {
           "id": "jrmmhm.pocket",
-          "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, charlieras262.omablur, io.github.sahzudin.omarchy-screenshot-manager, io.github.lijiawei0305-pixel.mihomo"
+          "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, io.github.sahzudin.omarchy-screenshot-manager"
         },
         {
           "id": "omarchy.tray",
           "hidden": [
             "Fcitx"
           ]
-        },
-        {
-          "id": "skoom.beszel"
         },
         {
           "id": "ronald.input-sources",
@@ -128,7 +123,8 @@
   "plugins": [
     {
       "id": "io.github.sirjul1337.lock-explorer",
-      "design": "split"
+      "design": "my-splitjianlong",
+      "boot": "snapshot:my-splitjianlong"
     },
     {
       "id": "andreconde.quick-look"
@@ -147,6 +143,9 @@
     },
     {
       "id": "io.github.maajix.spotlight"
+    },
+    {
+      "id": "io.github.claudsondouglas.arcdock"
     }
   ],
   "version": 1,

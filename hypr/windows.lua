@@ -18,6 +18,16 @@ o.window("^org\\.chromium\\.Chromium$", { idle_inhibit = "always", opacity = "0.
 -- Global decoration.blur is enabled; the lowered opacity lets the blur show through.
 o.window("com.thisisgm.flea", { opacity = "0.92 0.88" })
 
+-- Discord / QQ / ColaMD: same treatment as Zen above — translucent so the global blur
+-- shows through. Electron (Discord, ColaMD) and Qt (QQ) both draw an opaque
+-- background, so the app itself can't be made transparent from the outside;
+-- whole-window opacity is the only lever. Same value as Zen on purpose: omarchy's
+-- default-opacity tag rule (0.985 0.96) is a multiplier, so 0.92/0.88 lands on the
+-- identical result.
+o.window("discord", { opacity = "0.92 0.88" })
+o.window("^QQ$", { opacity = "0.92 0.88" })
+o.window("^colamd$", { opacity = "0.92 0.88" })
+
 -- yazi (SUPER+Y) and btop (CTRL+SHIFT+ESCAPE): float, centered, roomy.
 -- Omarchy hands btop the "floating-window" tag, whose 875x600 is too cramped for
 -- a TUI (btop loses its columns, yazi its preview pane). The tag's rules are

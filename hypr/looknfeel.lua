@@ -24,17 +24,23 @@ hl.config({
 hl.config({
   decoration = {
     -- Use round window corners.
-    rounding = 10,
+    -- 20 = the value Omablur used to pin here (was Omarchy's stock 10).
+    rounding = 20,
 
     blur = {
       enabled = true,
-      size = 8,
-      passes = 5,
+      -- size/passes/new_optimizations/ignore_opacity were previously written by
+      -- the Omablur plugin's marked block; folded in here after uninstalling it
+      -- (it only ever set these same decoration options).
+      size = 11,
+      passes = 2,
       xray = false,
       vibrancy = 0.5,
       brightness = 1.05,
       contrast = 0.95,
       input_methods = true,
+      new_optimizations = true,
+      ignore_opacity = true,
     },
   },
 })
@@ -74,17 +80,3 @@ hl.animation({ leaf = "fadeSwitch", enabled = true, speed = 5, bezier = "easeOut
 --   },
 -- })
 
--- BEGIN charlieras262.omablur
-hl.config({
-  decoration = {
-    rounding = 20,
-    blur = {
-      enabled = true,
-      size = 11,
-      passes = 2,
-      new_optimizations = true,
-      ignore_opacity = true,
-    },
-  },
-})
--- END charlieras262.omablur

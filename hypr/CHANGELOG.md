@@ -2,6 +2,20 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-17（Discord / QQ / ColaMD 窗口磨砂）
+- **`windows.lua`**：Discord（class `discord`）、QQ（`^QQ$`）、ColaMD（`^colamd$`）各加一条 `opacity = "0.92 0.88"`，与 Zen 同值（后两者锚定，避免误伤同类名）。全局 `decoration:blur` 已开（`getoption decoration:blur:enabled` = true），降透明度即可透出磨砂背景。Electron（Discord / ColaMD）/ Qt（QQ）都是自绘不透明底，应用侧做不出局部透明，整窗 opacity 是唯一手段。
+- **为什么跟 Zen 抄同一个数**：出厂 `default/hypr/windows.lua` 给所有窗打 `+default-opacity` 标签再乘 `0.985 0.96`，而 opacity 默认是**乘性**（`override` 才是绝对值）→ 同值即同链同结果（有效 0.906 / 0.845）。
+- **验证**：`hyprctl configerrors` 空；A/B 极值法（临时把该 app 改成 `0.35 override 0.35 override`）窗口区域灰度均值 —— Discord 0.163 → 0.516、QQ 0.629 → 0.559、ColaMD 0.937 → 0.809；改回 0.92 后 Discord **逐像素相同（RMSE 0）**、ColaMD 均值回到 0.9365（改前 0.9365）。⚠️ 截图对比务必**每次重新取窗口几何**——reload 后平铺列会位移，用固定坐标会量到别的窗口。备份 `windows.lua.bak.1789586987`。
+- 相关：（本地笔记存档） §五（单应用定制总表）。
+
+## 2026-09-16（视觉/输入法）
+- **`looknfeel.lua`**：删 Omablur 标记块，值折进基础 `decoration` 块（`rounding 20`、`blur size 11 / passes 2`、`new_optimizations`、`ignore_opacity`）。验证：`hyprctl getoption` 五项改前改后一致。
+- **`envs.lua`**：取消 `GTK_IM_MODULE`（GTK3/GTK4 走 Wayland text-input，候选框由 fcitx5 自绘 → 无「标尺缝」）；保留 `QT_IM_MODULE=fcitx5`（system 层是 fcitx4 的 `fcitx`，environment.d 无法取消变量，且该值无害：Qt 插件同时注册两键）。实测 nautilus / QQ / VS Code 无縫。备份 `envs.lua.bak.pre-textinput-*`。
+- **`apps/omarchy-shell.lua`**：补 `^arc-dock-settings$` 的 layer_rule（`ignore_alpha 0.3`）——dock 插件自注册的 `^(arc-dock)$` 锚点故意排除设置面板，导致面板半透明无磨砂。
+- **`apps/omarchy-shell.lua`**：再加一条 `^(arc-dock)$` 的 `blur_popups = true`——dock 右键菜单是这层 surface 的 **XDG popup**，插件自注册规则故意不带 `blur_popups`（源码注释假设菜单不透明），而菜单卡片读 `Color.popups.background`（`[popups] background-alpha` 0.58）→ 半透明却无磨砂。**只写 `blur_popups`**：同命名空间的多条规则按属性合并，`blur`/`ignore_alpha` 由插件运行时代管（`Arcdock.qml:504` → 0.05），在此重写会顶掉插件的玻璃开关联动。验证：`hyprctl configerrors` 空。
+- **`monitors.lua`**：停用便携屏（注释 `HDMI-A-1` 与 `ws6` 钉屏规则，保留供参考）。
+- 另见 `~/.config/omarchy/CHANGELOG.md` 同日条（卸 Omablur、菜单 alpha 0.65）。
+
 ## 2026-09-15 — 便携屏接入、工作区滚动限定主屏、btop/yazi 浮窗、边框 4
 - **monitors: 便携屏接入**：`HDMI-A-1`（BOE 2560x1600@120）放 DP-2 **左侧** `-1600x0`（scale 1.6 → 逻辑宽 1600，与 DP-2 的 `0..2400` 正好接壤）；DP-2 由 `3840x2160@144` 改 `@120` 并固定 `position = "0x0"`（原 `auto`）。**为什么**：两屏逻辑矩形必须接壤鼠标才跨得过去，留缝会卡在中间。
 - **monitors: `ws6` 钉在便携屏**（`hl.workspace_rule`）——看片专用，其余工作区留给主屏。

@@ -23,3 +23,12 @@ hl.layer_rule({ match = { namespace = "omarchy-lock-preview" }, blur = true })
 hl.layer_rule({ match = { namespace = "^omasnap$" }, no_anim = true, animation = "none", no_screen_share = true })
 -- Spotlight 命令面板：全屏 scrim + 居中卡片，只糊卡片本体。
 hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore_alpha = 0.4 })
+-- Arc Dock settings panel (third-party arc-dock plugin). Full-screen transparent
+-- surface with one translucent card; the dock's own blur rule is anchored to
+-- ^(arc-dock)$ on purpose, so the panel needs its own. Blur only the card.
+hl.layer_rule({ match = { namespace = "^arc-dock-settings$" }, blur = true, ignore_alpha = 0.3 })
+-- Arc Dock right-click menu: an XDG popup of the dock's own layer surface. The
+-- plugin's runtime rule omits blur_popups (it assumes an opaque menu), but the
+-- menu card takes the theme's [popups] alpha, so the popups need the blur.
+-- No blur/ignore_alpha here on purpose: the plugin owns those for ^(arc-dock)$.
+hl.layer_rule({ match = { namespace = "^arc-dock$" }, blur_popups = true })

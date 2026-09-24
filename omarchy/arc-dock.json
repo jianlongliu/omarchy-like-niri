@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "settings": {
+    "magnifyReach": 3,
+    "magnifyScale": 200,
+    "edgeMargin": 0,
+    "dockTheme": "dark"
+  }
+}

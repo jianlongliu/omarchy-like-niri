@@ -1,21 +1,21 @@
 mode = "dark"
 
-accent = "#feb0d2"
-selection = "#6d3350"
-muted = "#d4c2c7"
+accent = "#ffb0cf"
+selection = "#6e334e"
+muted = "#d5c2c7"
 
-hyprland_inactive_border = "rgba(9d8c92aa)"
-hyprland_active_border = "rgba(feb0d2ff) rgba(f2bb98ff) rgba(6d3350ff) 45deg"
+hyprland_inactive_border = "rgba(9d8c91aa)"
+hyprland_active_border = "rgba(ffb0cfff) rgba(f1bb97ff) rgba(6e334eff) 45deg"
 
 background = "#191114"
 dark_background = "#130c0f"
 darker_background = "#100a0c"
 lighter_background = "#30282b"
 
-foreground = "#eedfe3"
-dark_foreground = "#d4c2c7"
-light_foreground = "#eedfe3"
-bright_foreground = "#eedfe3"
+foreground = "#eedfe2"
+dark_foreground = "#d5c2c7"
+light_foreground = "#eedfe2"
+bright_foreground = "#eedfe2"
 
 red = "#f38ba8"
 yellow = "#f9e2af"
