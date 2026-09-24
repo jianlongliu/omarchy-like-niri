@@ -2,6 +2,16 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-24 — 上游跟踪：lock-explorer 补丁 rebase + 两个第三方插件升级
+
+- **补丁 rebase 到 v1.8.1**：`lock-explorer` 上游 v1.8.1 **独立修了同一个问题**（旧 22px 圆弧在 4K 上「缩成一个小点」），解法是**把圆弧画成 96px 再按输入框高度缩放**。本机解法不同（沿面板边界画满高竖线），观感不同故不采纳。冲突只在「等待帧生成」与「帧定位」两处，解法 = **保留我们的 `wait_line` 分支，回退分支改用上游的 96px + `spinsize`**。补丁文件已更新（基准版本写进 `omarchy/patches/README.md`）。
+- **`lock-explorer` v1.7.7 → v1.8.1**（39 个提交）：`git stash` → `merge --ff-only` → `stash pop` 解冲突。新补丁对纯净 v1.8.1 **干净应用、结果逐字节一致**（独立复现验证，非目测）。
+- **`io.github.maajix.spotlight` 1.5.2 → 1.6.2**（52 个提交，含安全修复：拒绝伪造的 Wi-Fi/蓝牙行、Unicode 控制字符）。无本地补丁 → 直接 ff。
+- **开机解密屏未重贴**：竖线分支下 v1.8.1 的改动（96px 圆弧、`entry.ih`）只在回退分支生效 → 重贴无可见变化却要重建两个 UKI（30–60s）。已烘焙主题仍是 v1.7.7 基准那次（已验证 `spin10.png` = `6x1944` 即竖线）。
+- **验收**：`omarchy restart shell` 后当前 shell 进程 WARN **9 条、15 秒零增长**（7 条 boot 预览缺图 + 1 条 bar 重复注册 + 1 条空 URL，均已知无害）；两个插件 `enabled` 正常加载。
+- **文档同步**：`omarchy-plugins.md` §9 拆成 9.1（clone 对 omarchy）/ **9.2（第三方插件对作者，新增）** / 9.3（rebase 流程与坑）；§8.1 补丁行更新基准版本；§8.6 补「补丁 vs 上游」与「升级后要不要重贴」两行；三篇头部版本号 4.0.3 → **4.0.4**（实测）。
+- **踩坑**：① 循环里 `cd "$d"` 会让后续相对路径错位 → 必须 `git -C`；② 冲突未 `git add` 时 `git diff` 吐 combined diff（`diff --cc`），`git apply` 拒收 → 须 `git add` 后用 `--cached` 生成补丁。
+
 ## 2026-09-24 — 锁屏设计纳入 git、开机解密屏补丁入库、公开仓 docs 补齐
 
 - **`lock-designs/SplitJianlong.qml` 纳入 git**：此前只存在于磁盘（同目录 `Card.qml` 已跟踪），等于这个自定义锁屏没有备份。现跟踪。

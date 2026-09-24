@@ -1,5 +1,5 @@
 diff --git a/plymouth/custom/generate.sh b/plymouth/custom/generate.sh
-index ea7113e..b027460 100755
+index e90a44c..0b24ca9 100755
 --- a/plymouth/custom/generate.sh
 +++ b/plymouth/custom/generate.sh
 @@ -65,11 +65,51 @@ entry=$(val entry pill);          entry_y=$(val entry_y 72);      entry_w=$(val
@@ -54,7 +54,7 @@ index ea7113e..b027460 100755
  # Upper bound for a background that is otherwise passed through at its own
  # aspect ratio. The theme is copied to the EFI partition, so an arbitrary
  # image still needs a ceiling; a snapshot of an ordinary display is far under
-@@ -110,18 +150,39 @@ case "$entry" in
+@@ -110,21 +150,43 @@ case "$entry" in
    line) magick -size "${entry_w}x50" xc:none -draw "fill rgba($accent_i,0.8) rectangle 0,48 $entry_w,50" "$staging/entry.png" ;;
  esac
  
@@ -78,10 +78,13 @@ index ea7113e..b027460 100755
    fg_i=$(hex_ints "$fg_t")
 -  # Loading: a rotating arc, clearly distinct from the passphrase bullets.
 -  # Pre-rendered frames -- text and font rendering die after switch_root.
+-  # Drawn at 96 px and scaled by the script to the entry it replaces, so it
+-  # stays in proportion on a 4K framebuffer instead of shrinking to a speck:
+-  # the old 22 px arc's geometry, scaled up (radius 8 -> 35, stroke 3 -> 13).
 -  for i in $(seq 1 12); do
 -    a=$(( (i - 1) * 30 ))
--    magick -size 22x22 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 3 -fill none \
--      -draw "ellipse 11,11 8,8 $a,$((a + 120))" "$staging/spin$i.png"
+-    magick -size 96x96 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 13 -fill none \
+-      -draw "ellipse 48,48 35,35 $a,$((a + 120))" "$staging/spin$i.png"
 -  done
 +  if [[ -n $wait_x ]]; then
 +    for i in $(seq 1 12); do
@@ -93,20 +96,24 @@ index ea7113e..b027460 100755
 +    done
 +  else
 +    # Loading: a rotating arc, clearly distinct from the passphrase bullets.
++    # Pre-rendered frames -- text and font rendering die after switch_root.
++    # Drawn at 96 px and scaled by the script to the entry it replaces, so it
++    # stays in proportion on a 4K framebuffer instead of shrinking to a speck:
++    # the old 22 px arc's geometry, scaled up (radius 8 -> 35, stroke 3 -> 13).
 +    for i in $(seq 1 12); do
 +      a=$(( (i - 1) * 30 ))
-+      magick -size 22x22 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 3 -fill none \
-+        -draw "ellipse 11,11 8,8 $a,$((a + 120))" "$staging/spin$i.png"
++      magick -size 96x96 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 13 -fill none \
++        -draw "ellipse 48,48 35,35 $a,$((a + 120))" "$staging/spin$i.png"
 +    done
 +  fi
    # One passphrase bullet; the script draws one sprite per typed character,
    # so the row aligns exactly inside the entry box.
    magick -size 14x14 xc:none -fill "rgba($fg_i,0.95)" -draw "circle 7,7 7,2" "$staging/dot.png"
-@@ -334,7 +395,20 @@ booting.sprite = Sprite();
- booting.sprite.SetOpacity(0);
+@@ -348,7 +410,20 @@ spinsize = Math.Int(entry.ih * 0.95);
+ if (spinsize < 22) spinsize = 22;
  EOF
  # Literal lines: plymouth script string+number concatenation is unreliable.
--for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\");"; done
+-for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\").Scale(spinsize, spinsize);"; done
 +# Where the wait frames go, and how fast they cycle: the line is pinned to the
 +# panel edge and scales with the background (the script works in a 3840x2160
 +# canvas), and a full-height fill wants a slower cycle than the little arc.
@@ -119,12 +126,12 @@ index ea7113e..b027460 100755
 +      "$i" "$i" "$wait_line_w" "${wait_h[$i]}"
 +  done
 +else
-+  for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\");"; done
++  for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\").Scale(spinsize, spinsize);"; done
 +fi
  cat <<EOF
  
  fun display_password_callback(prompt_text, count) {
-@@ -373,11 +447,11 @@ fun display_normal_callback() {
+@@ -387,11 +462,11 @@ fun display_normal_callback() {
  fun refresh_callback() {
    if (global.boot_wait == 1) {
      global.boot_frame = global.boot_frame + 1;

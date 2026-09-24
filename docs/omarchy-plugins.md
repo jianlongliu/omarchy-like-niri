@@ -1,6 +1,6 @@
 # Omarchy 本机插件参考
 
-> 最后核对：2026-09-15 · Omarchy 4.0.3 / Hyprland 0.56.2
+> 最后核对：2026-09-24 · Omarchy 4.0.4 / Hyprland 0.56.2
 > 作用：记录本机**主动安装/克隆且当前启用**的 Omarchy shell 插件清单、目录结构与常用管理命令。此文档按真实 `shell.json` + `omarchy plugin list` 同步。系统自带的 first-party `omarchy.*` 为只读内置，禁用/移除项均不在此文档。
 > 注意：niri 化的 scrolloverview 是 **Hyprland 原生插件**（`hyprpm` 管理），**不在此文档**（Omarchy shell 插件）范围内，详见 `omarchy-nirification.md`。
 
@@ -68,7 +68,7 @@ omarchy refresh shell      # 恢复默认 shell 配置(自动备份)
 
 4.0.3 把插件注入从「直接塞 host shell」改成窄代理 `PluginShellApi`，而该 scoped 代理对**一切第三方菜单**（含官方 clone、含无 clonedFrom 的非克隆插件）的 `appLibrary` 运行时为 `null` → `mergeAppRows()` 静默返回 → Apps 空。**出厂 first-party 菜单直连 host shell，不受影响**——所以现在用出厂菜单，apps 正常。
 
-> 已绕开（方案 A）。**未修根因**；要根治（报上游）需改 shell.qml 的 `manifestHasKind` 取值时机。完整证据链、候选修法、回归清单见 本机归档笔记（未随本仓库发布）。
+> 已绕开（方案 A）。**未修根因**；要根治（报上游）需改 shell.qml 的 `manifestHasKind` 取值时机。完整证据链、候选修法、回归清单见本机归档笔记（未随本仓库发布）。
 
 **center**（锚定 `omarchy.clock` 居中）：`jianlongliu.indicators` → `omarchy.spacer`(16px，隔离 indicators↔CPU) → `coding-sparrow.systempulse` → `omarchy.clock` → `jianlongliu.keyboard-layout` → `omarchy.weather` → `omarchy.power` → `omarchy.spacer` → `omarchy.media` → `jianlongliu.system-update`
 
@@ -141,7 +141,9 @@ bar:               { position: top, transparent: false, id: charlieras262.floati
 
 ### 8.1 ⚠️ 本地补丁清单（update / 插件 pull 会覆盖，需重打）
 
-下表都是**改第三方插件源码**的本地补丁，不在上游；分**防御补丁**（上游 bug 的本地兜底）与**定制补丁**（有意改外观/行为）。`omarchy update` 或对相应插件 `git pull` 后**可能被冲掉**，届时按需重打（防御补丁的原诊断见 本机归档笔记（未随本仓库发布））：
+下表都是**改第三方插件源码**的本地补丁，不在上游；分**防御补丁**（上游 bug 的本地兜底）与**定制补丁**（有意改外观/行为）。`omarchy update` 或对相应插件 `git pull` 后**可能被冲掉**，届时按需重打（防御补丁的原诊断见本机归档笔记（未随本仓库发布））：
+
+> **补丁存档**：公开仓 `omarchy/patches/` 存可重打的 diff（当前一个：`lock-explorer-generate.sh.patch`，含重打/回退步骤）。插件目录被 `.gitignore` 排除且各自带独立 git 仓，故不放插件文件本体。
 
 | 插件 | 文件 | 补丁作用 |
 |---|---|---|
@@ -151,7 +153,7 @@ bar:               { position: top, transparent: false, id: charlieras262.floati
 | `jianlongliu.workspaces` | `Workspaces.qml` | 防御：`hovered` 原为 readonly 绑定、在 MouseArea 创建前求值报 undefined；改普通属性 + onEntered/onExited 驱动（此项在配置仓库，非插件仓库） |
 | `meviusisback.ai-subs` | `assets/icons/commandcode.svg` | 定制：Command Code 品牌图原是「黑圆角方块 + 白 ⌘」，换成**裸 ⌘**（只留白色 ⌘ path，viewBox 收紧到占图标位 20/24）→ 见 §8.4 的重打脚本 |
 | `io.github.claudsondouglas.arcdock` | `ArcSlot.qml`（图标 `Image`，约 388 行） | 定制：图标**取图尺寸 = 显示尺寸 × 悬停放大 × DPR**，`magnifyScale 200` 时 ≈166px 却只显示在 83px 上（**2 倍缩小**）→ 双线性缩小丢掉 SVG 抗锯齿，细线图标（Zen 的同心环最明显）出硬台阶。加 `mipmap: true` 让缩小走 mipmap 采样。**实测**环区中间灰(AA)像素 752 → **936（+24%）**。⚠️ 放大倍率 ≤150% 时只缩 1.25 倍、mipmap 不触发 → 等于没加（2026-09-16 首次尝试就是这么"无效"的） |
-| `io.github.sirjul1337.lock-explorer` | `plymouth/custom/generate.sh` | 定制：开机解密屏「等待动画」从 22px 圆弧改为**面板边界竖线**（新增 conf 键 `wait_line`/`wait_line_width` + `panel_edge_x()` 自动找边界，找不到自动回退旧圆弧）；细节、重贴与回退见 §8.6 |
+| `io.github.sirjul1337.lock-explorer` | `plymouth/custom/generate.sh` | 定制：开机解密屏「等待动画」从圆弧改为**面板边界竖线**（新增 conf 键 `wait_line`/`wait_line_width` + `panel_edge_x()` 自动找边界，找不到自动回退**上游圆弧**）；**补丁基准 = v1.8.1**（2026-09-24 rebase，diff 存公开仓 `omarchy/patches/`）；细节、重贴与回退见 §8.6 |
 
 ### 8.2 看 shell 启动日志的正确姿势
 
@@ -300,7 +302,9 @@ grim -g "$((x-10)),$((y-10)) $((w+20))x$((h+20))" /tmp/dock.png
 | 改显示名 | 锁屏 `userName` 只认 `$USER`（`DesignBase.qml:53`，插件**无显示名设置**）；显示名靠**用户设计副本** `~/.config/omarchy/lock-designs/SplitJianlong.qml`（`text: "Jianlong Liu"` 字面量，需 `import "../plugins/io.github.sirjul1337.lock-explorer/designs"`） |
 | 回退 | boot 页选 **Untouched** + Apply，或 `apply.sh stock`；limine 原背景色存 `/boot/limine.conf.omarchy-lock-explorer.colors` |
 | 撤销等待动画补丁 | `git -C <插件> checkout plymouth/custom/generate.sh` 后重贴一次 |
-| 等待动画（现状） | 回车后：**面板边界竖线**——accent `#ffb0cf`、6px 宽、自上而下填满、12 帧 ÷8 ≈ **1.6s 一圈**、末两帧淡出（循环无切点）；边界由 `panel_edge_x()` 三条横带投票自动找，本机算出 **76.67%（x2944）**；找不到边界的设计自动回退旧 22px 圆弧 |
+| 等待动画（现状） | 回车后：**面板边界竖线**——accent `#ffb0cf`、6px 宽、自上而下填满、12 帧 ÷8 ≈ **1.6s 一圈**、末两帧淡出（循环无切点）；边界由 `panel_edge_x()` 三条横带投票自动找，本机算出 **76.67%（x2944）**；找不到边界的设计自动回退**上游圆弧** |
+| ⚠️ 补丁 vs 上游（2026-09-24） | 上游 v1.8.1 **独立修了同一个问题**（旧 22px 圆弧在 4K 上「缩成一个小点」），解法是**把圆弧画成 96px 再按输入框高度缩放**；本机解法是**沿面板边界画满高竖线**，观感不同故不采纳上游。补丁已 rebase 到 v1.8.1：冲突只在「等待帧生成」与「帧定位」两处，**保留我们的 `wait_line` 分支，回退分支改用上游的 96px + `spinsize` 缩放**。上游 issue #40 仍开着 |
+| 升级后要不要重贴 | **本机不必**：竖线分支下 v1.8.1 的改动（96px 圆弧、`entry.ih` 缩放）只在回退分支生效，重贴无可见变化却要重建两个 UKI。已烘焙主题仍是 v1.7.7 基准那次（`spin10.png` = `6x1944` 即竖线）。想让引导产物与插件版本对齐时再重贴 |
 | 实测可见窗口 | 「密码被接受 → 合成器接管」≈ **3.3s**（本机 NVMe + UKI）→ 约两圈 |
 
 **⚠️ 两个坑**
@@ -315,20 +319,71 @@ grim -g "$((x-10)),$((y-10)) $((w+20))x$((h+20))" /tmp/dock.png
 
 > 证据链、被否方案、上游 issue 全文：`agent-scratch/lock-explorer-boot-wait-line.md`；**上游 issue 已提：[SirJul1337/omarchy-lock-explorer#40](https://github.com/SirJul1337/omarchy-lock-explorer/issues/40)**（含内嵌 GIF + 4K 片；素材 gist `948138214cf7b9fa92eda859d9cb5f45`）——上游若合并，即可撤 §8.1 那条本地补丁。
 
-## 九、clone 上游跟踪
+## 九、上游跟踪：clone 与第三方插件
+
+> **两条独立跟踪线**，别混：① **clone**（`jianlongliu.*`）跟 **omarchy 本体**走，随 omarchy 升级核对；② **第三方插件**（其他人发布的）各自有 git 上游，跟**插件作者**走，与 omarchy 版本无关——**只盯 ① 会漏掉 ②**（2026-09-24 实测漏了两个大版本）。
+
+### 9.1 clone 上游跟踪（对 omarchy）
 
 > 升级 omarchy 4.0.2→4.0.3 后逐对核对全部 clone 与上游，结论：**全部已同步**；与上游的差异均为**有意定制**，勿合并。
-> 复验（2026-09-11）：`diff ~/.config/omarchy/plugins/<clone>/文件 /usr/share/omarchy/shell/plugins/<上游>/文件`。
+> 复验（2026-09-24，omarchy **4.0.4**）：`diff ~/.config/omarchy/plugins/<clone>/文件 /usr/share/omarchy/shell/plugins/<上游>/文件` —— 下表结论在 4.0.4 下复现，仍全部同步。
 
 | clone | 上游 4.0.3 位置 | 与上游差异 | 状态 |
 | --- | --- | --- | --- |
 | `jianlongliu.osd` | `shell/plugins/osd/` | Osd.qml 差异 22 行（新增/删除行合计；`diff` 输出 28 行含 hunk 头） = 卡片式 OSD 定制 | 同步 |
-| `jianlongliu.workspaces` | **`shell/plugins/bar/widgets/`** | 差异 82 行 = GNOME 45 圆点/胶囊重写；2026-09-10 另修 hovered undefined（§8.1） | 同步 |
+| `jianlongliu.workspaces` | **`shell/plugins/bar/widgets/`** | 差异 114 行 = GNOME 45 圆点/胶囊重写；2026-09-10 另修 hovered undefined（§8.1） | 同步 |
 | `jianlongliu.indicators` | **`shell/plugins/bar/widgets/`** | 2 行 = 子目录路径适配 | 同步 |
 | `jianlongliu.keyboard-layout` | **`shell/plugins/bar/widgets/`** | 2 行 = `fontSize: Style.font.body`（caption→body 统一） | 同步 |
 | `jianlongliu.system-update` | **`shell/plugins/bar/widgets/`** | 2 行 = `fontSize: Style.font.body` | 同步 |
+| `jianlongliu.arch-logo` | —（自建，无上游） | — | — |
+
+**另有 3 个 disabled 克隆是废弃方案遗留**：`jianlongliu.audio` / `.bluetooth` / `.network`——差异都是「Nerd 字形 → Material Symbols 连字名 + 自定义 `iconFont`」，即已废弃的「克隆+fontFamily+连字名」路线。**当前 disabled、未在跑**；要么留着当参考，要么清掉（清前先确认 `shell.json` 没引用）。
 
 **关键认知**：
 - `omarchy.workspaces/indicators/keyboard-layout/system-update` **并未消失**——早前已重构为 `omarchy.bar` 的内建 widget（`bar/widgets/*.qml`），4.0.1→4.0.3 均如此。查找上游请到 `bar/widgets/`，别只在 plugins 顶层找。
-- **升级后同步检查**：`diff ~/.config/omarchy/plugins/<clone>/ /usr/share/omarchy/shell/plugins/<上游>/`。判别：**只有用户定制线的差异 = 已同步**；**出现上游侧新增/改动行 = 需 merge**（像 clock 这次）。
+- **升级后同步检查**：`diff ~/.config/omarchy/plugins/<clone>/ /usr/share/omarchy/shell/plugins/<上游>/`。判别：**只有用户定制线的差异 = 已同步**；**出现上游侧新增/改动行 = 需 merge**（像 clock 那次）。
 - **floating-bar 与 4.0.3**：内置 Bar.qml 4.0.3 引入 `PluginBarApi` + `fallbackBarWidgetRegistry`（专门兼容第三方完整 bar），浮栏无需等上游适配；升级后那次 ~1000 条 `foreground/fontFamily of null` = **rescan 瞬时噪声**（重载瞬间 bar 上下文未注入），非配置错误。2026-09-16 另修：Omablur 卸载后 `Style.shellOpacity` 彻底废弃，`Bar.qml` 改为直接吃主题 `[bar] background-alpha`（否则回落不透明 → 实心；补丁清单见 §8.1）。
+
+### 9.2 第三方插件上游跟踪（对插件作者）
+
+查法（每个插件目录都是独立 git 仓）：
+
+```bash
+B=~/.config/omarchy/plugins
+for d in "$B"/*/; do p=$(basename "$d"); [ -d "$d/.git" ] || continue
+  case "$p" in jianlongliu.*) continue;; esac
+  timeout 30 git -C "$d" fetch -q origin
+  up=$(git -C "$d" rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
+  [ -n "$up" ] && printf "%-46s 落后 %-3s 领先 %-3s\n" "$p" \
+    "$(git -C "$d" rev-list --count HEAD..$up)" "$(git -C "$d" rev-list --count $up..HEAD)"
+done
+```
+
+> ⚠️ **必须用 `git -C "$d"`**：在 `for` 循环里 `cd "$d"` 会把后续相对路径 `$B/*/` 解析错位（2026-09-24 实测只跑出一个插件）。
+
+**2026-09-24 快照**（18 个第三方插件）：
+
+| 插件 | 落后 | 处置 |
+| --- | --- | --- |
+| `io.github.maajix.spotlight` | **52** | 已升 1.5.2 → **1.6.2**（含安全修复：拒绝伪造的 Wi-Fi/蓝牙行、Unicode 控制字符）。**无本地补丁 → 直接 `git merge --ff-only origin/main`** |
+| `io.github.sirjul1337.lock-explorer` | **39** | 已升 v1.7.7 → **v1.8.1**。**有本地补丁 → 必须先 rebase 再升**（步骤见 §9.3） |
+| `charlieras262.floating-bar` | 0（领先 1） | 上游无新版；领先的 1 个提交 = 本地防御补丁（§8.1） |
+| `io.github.claudsondouglas.arcdock` / `meviusisback.ai-subs` | 0 | 已最新（各有本地补丁，工作区 dirty 属正常） |
+| 其余 13 个 | 0 | 已最新 |
+
+### 9.3 升级「打过本地补丁的第三方插件」（rebase 流程）
+
+```bash
+P=~/.config/omarchy/plugins/<插件>; cd "$P"
+tar -czf ~/.local/state/omarchy/backups/<插件>-$(date +%Y%m%d-%H%M%S).tar.gz --exclude=.git .   # 兜底
+git stash push -m "<补丁名>" <改过的文件>        # 腾出干净工作区
+git merge --ff-only origin/main                   # 升级
+git stash pop                                     # 弹回 → 冲突
+# 手工解冲突 → 验证 → 生成新补丁 → `git add` 标记已解决
+git diff --cached --src-prefix=a/ --dst-prefix=b/ <文件> > <新补丁>.patch
+```
+
+**踩过的坑**：
+- **`git diff` 在冲突未标记时会吐 combined diff**（`diff --cc` + `index a,b..0000000`，91 行那种），`git apply` 拒收、报 `No valid patches in input`。**必须 `git add` 之后用 `--cached` 生成**（147 行、正常的 `diff --git` 头）。
+- 验证方式是**独立复现**而非目测：取上游版放临时目录 → `git apply` 新补丁 → `diff` 比对工作区，**逐字节一致**才算 rebase 成功。
+- 补丁基准版本要写进补丁文件旁的 README（换版本后旧补丁可能不适用）。

@@ -1,7 +1,7 @@
 # Omarchy 的 niri 化配置笔记（可移植版）
 
 > 目标：把 Omarchy 的工作区切换做成 niri 风格——滚动总览(ScrollOverview) + 纵向平滑切换动画。记录完整配置、验证命令与踩坑点，可直接套用到任何 Omarchy/Hyprland 环境。
-> 最后核对：2026-09-13 · Omarchy 4.0.3 / Hyprland 0.56.2
+> 最后核对：2026-09-24 · Omarchy 4.0.4 / Hyprland 0.56.2
 > 参考项目：[yayuuu/hyprland-scroll-overview](https://github.com/yayuuu/hyprland-scroll-overview)（niri scroll-overview 移植，基于 hyprexpo 的 scroll-overview 分支）。
 
 ## 一、目标效果
