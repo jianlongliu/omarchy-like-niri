@@ -4,13 +4,23 @@
 
 > ⚠️ 和笔记本的 [omarchy-on-niri](https://github.com/jianlongliu/omarchy-on-niri)（真正的 niri 移植）不同：本仓库跑在 **Hyprland** 上，只是"操作风格像 niri"，不是 niri 移植。
 
+## 截图
+
+|  |  |
+| :---: | :---: |
+| **滚动总览**（`SUPER + TAB`）<br>[![滚动总览](screenshots/scroll-overview.webp)](screenshots/scroll-overview.webp) | **纵向平铺 + 浮栏**<br>[![纵向平铺](screenshots/tiling.webp)](screenshots/tiling.webp) |
+| **底栏与 Arc Dock**<br>[![底栏与 Arc Dock](screenshots/bar-dock.webp)](screenshots/bar-dock.webp) | **锁屏**（lock-explorer）<br>[![锁屏](screenshots/lock-screen.webp)](screenshots/lock-screen.webp) |
+
+> 点图看原图。截图里的壁纸/头像属本机私人素材，未随仓库发布；实际观感随动态配色（matugen）变化。
+
 ## 目录
 
 ```
 omarchy-like-niri/
-├── hypr/       Hyprland 配置（~/.config/hypr）
-├── omarchy/    Omarchy 配置 + 自改克隆插件（~/.config/omarchy）
-└── docs/       niri 化教程 + bar 视觉/插件参考
+├── hypr/         Hyprland 配置（~/.config/hypr）
+├── omarchy/      Omarchy 配置 + 自改克隆插件（~/.config/omarchy）
+├── docs/         niri 化教程 + bar 视觉/插件参考
+└── screenshots/  README 截图
 ```
 
 - **`hypr/`**：ScrollOverview 插件、`workspaces` 纵向动画、niri 化快捷键、有界工作区/移窗函数。
@@ -21,6 +31,7 @@ omarchy-like-niri/
   | [`omarchy-nirification.md`](docs/omarchy-nirification.md) | niri 化安装教程（分步，每步带验证/回退）——**从这里开始** |
   | [`omarchy-visual-tweaks.md`](docs/omarchy-visual-tweaks.md) | bar 视觉定制：字号/对齐、磨砂玻璃与 layer rule、工作区胶囊、全局字体链、Gnome 风锁屏/SDDM 壁纸同步 |
   | [`omarchy-plugins.md`](docs/omarchy-plugins.md) | 插件清单与管理命令（按真实 `shell.json` 同步）+ 改第三方插件源码的本地补丁记录 |
+- **`screenshots/`**：README 用的实拍截图（webp，1920×1080），见上文「截图」。
 
 > 克隆插件位于用户目录 `~/.config/omarchy/plugins/`，不在系统包内，`omarchy update` **不会覆盖**它们。纳入 git 是用于**版本回退 + 备份/迁移**，并非防 update 覆盖（那本就不需要）。
 
