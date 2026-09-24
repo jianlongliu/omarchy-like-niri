@@ -8,6 +8,7 @@
 - **`lock-explorer` v1.7.7 → v1.8.1**（39 个提交）：`git stash` → `merge --ff-only` → `stash pop` 解冲突。新补丁对纯净 v1.8.1 **干净应用、结果逐字节一致**（独立复现验证，非目测）。
 - **`io.github.maajix.spotlight` 1.5.2 → 1.6.2**（52 个提交，含安全修复：拒绝伪造的 Wi-Fi/蓝牙行、Unicode 控制字符）。无本地补丁 → 直接 ff。
 - **开机解密屏未重贴**：竖线分支下 v1.8.1 的改动（96px 圆弧、`entry.ih`）只在回退分支生效 → 重贴无可见变化却要重建两个 UKI（30–60s）。已烘焙主题仍是 v1.7.7 基准那次（已验证 `spin10.png` = `6x1944` 即竖线）。
+- **开机解密屏已重贴**（对齐 v1.8.1）：结论是**纯版本对齐、零观感变化**，有硬证据——重贴后与旧版逐张 `magick compare -metric AE` = **0**（`spin*` / `dot` / `bg`），且 `generate.sh` 是生成器、**不随主题装进 initrd**（initrd 里只有 `bg*.png` / `dot.png` / `spin*.png` / `omarchy-boot.script` / `.plymouth` / `design`）。原因：上游 v1.8.1 的改动（96px 圆弧、`entry.ih`）只作用于**回退分支**，本机走竖线分支。重建两个 UKI 约 40s；`limine.conf` 的 blake2b 哈希已自动同步（已核对 conf 值 == 实际 UKI `b2sum`）。
 - **验收**：`omarchy restart shell` 后当前 shell 进程 WARN **9 条、15 秒零增长**（7 条 boot 预览缺图 + 1 条 bar 重复注册 + 1 条空 URL，均已知无害）；两个插件 `enabled` 正常加载。
 - **文档同步**：`omarchy-plugins.md` §9 拆成 9.1（clone 对 omarchy）/ **9.2（第三方插件对作者，新增）** / 9.3（rebase 流程与坑）；§8.1 补丁行更新基准版本；§8.6 补「补丁 vs 上游」与「升级后要不要重贴」两行；三篇头部版本号 4.0.3 → **4.0.4**（实测）。
 - **踩坑**：① 循环里 `cd "$d"` 会让后续相对路径错位 → 必须 `git -C`；② 冲突未 `git add` 时 `git diff` 吐 combined diff（`diff --cc`），`git apply` 拒收 → 须 `git add` 后用 `--cached` 生成补丁。
