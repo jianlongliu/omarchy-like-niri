@@ -11,7 +11,7 @@
 | **滚动总览**（`SUPER + TAB`）<br>[![滚动总览](screenshots/scroll-overview.webp)](screenshots/scroll-overview.webp) | **纵向平铺 + 浮栏**<br>[![纵向平铺](screenshots/tiling.webp)](screenshots/tiling.webp) |
 | **底栏与 Arc Dock**<br>[![底栏与 Arc Dock](screenshots/bar-dock.webp)](screenshots/bar-dock.webp) | **锁屏**（lock-explorer）<br>[![锁屏](screenshots/lock-screen.webp)](screenshots/lock-screen.webp) |
 
-> 点图看原图。截图里的壁纸/头像属本机私人素材，未随仓库发布；实际观感随动态配色（matugen）变化。
+> 点图看原图。实际观感随动态配色（matugen）与壁纸变化。
 
 ## 目录
 

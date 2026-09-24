@@ -1,7 +1,7 @@
 # Omarchy 的 niri 化配置笔记（可移植版）
 
 > 目标：把 Omarchy 的工作区切换做成 niri 风格——滚动总览(ScrollOverview) + 纵向平滑切换动画。记录完整配置、验证命令与踩坑点，可直接套用到任何 Omarchy/Hyprland 环境。
-> 最后核对：2026-09-11 · Omarchy 4.0.3 / Hyprland 0.56.2
+> 最后核对：2026-09-13 · Omarchy 4.0.3 / Hyprland 0.56.2
 > 参考项目：[yayuuu/hyprland-scroll-overview](https://github.com/yayuuu/hyprland-scroll-overview)（niri scroll-overview 移植，基于 hyprexpo 的 scroll-overview 分支）。
 
 ## 一、目标效果
@@ -27,11 +27,15 @@
 | 5 | 绑 niri 化快捷键 | 六 | `hyprctl -j binds` 查到新绑定 | `hl.unbind` 那些键 |
 | 6 | 加有界动态工作区函数（Super+滚轮） | 六 | 滚轮 1→2→3 停在空区 | 还原 `bindings.lua` |
 | 7 | 加有界移窗函数（Super+Ctrl+↑/↓） | 六 | 实按：独窗不越界 | 还原 `bindings.lua` |
-| 8 | （可选）nautilus 默认浮动 | 九 | 重开 nautilus 为浮动 | 删 `o.window` 行 |
-| 9 | 总验证 | 七 | `configerrors` 空 + 插件加载 | 逐节回退 |
+| 8 | 多屏：钉副屏工作区 + 加屏守卫/范围钳制 | 六 | 主屏滚不跳屏、副屏不响应 | 还原 `bindings.lua` + 删 `workspace_rule` |
+| 9 | （可选）nautilus 默认浮动 | 九 | 重开 nautilus 为浮动 | 删 `o.window` 行 |
+| 10 | 总验证 | 七 | `configerrors` 空 + 插件加载 | 逐节回退 |
+
+> 第 8 步是**有边界**的做法（滚到底停）。若你要的是"每屏各自无限滚动"，原生 `r±1` 选择器更直接，但**无边界**；布局层还可开 `scrolling`。两者都见第六节「原生替代」。
 
 > 键盘冲突：换机器先 `hyprctl -j binds` 查 Super+Tab 等是否已被占，再决定要不要覆盖。
 > 笔记本/有触控板：可额外启用第八节触控板手势（桌面机默认不启用）。
+> **多显示器：第 6、7 步的功能默认按单屏写，接第二块屏后必须做第 8 步**，否则 Super+滚轮会把焦点甩到另一块屏（见六「多显示器适配」）。
 
 ## 二、ScrollOverview 插件安装
 
@@ -42,7 +46,7 @@ hyprpm enable scrolloverview
 ```
 
 > 插件用仓库**默认分支**即可。若插件编译/加载因 Hyprland 版本不匹配失败，用 `hyprpm add <url> <git-rev>` 锁定适配你 Hyprland 版本的提交——先用默认、失败再锁 rev。
-> ⚠️ 但**依赖 ABI 类不匹配锁 rev 躲不过（2026-09-10 实测）**：Hyprland 包重编译只换依赖版本、commit 不变时（如 0.56.2-2 rebuild with aquamarine-0.15.0），hyprpm 仍拿过期的 `headersRoot` 快照重编，插件加载抛 `[he] Version mismatch` 且 hyprpm 打印假成功（以 `hyprctl plugins list` 为准）。完整根因+无 sudo 修复见 本地笔记的「hyprpm 版本错配」节：手动 make 编译 .so 顶替 `/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/` 下同名文件即可。
+> ⚠️ 但**依赖 ABI 类不匹配锁 rev 躲不过（2026-09-10 实测）**：Hyprland 包重编译只换依赖版本、commit 不变时（如 0.56.2-2 rebuild with aquamarine-0.15.0），hyprpm 仍拿过期的 `headersRoot` 快照重编，插件加载抛 `[he] Version mismatch` 且 hyprpm 打印假成功（以 `hyprctl plugins list` 为准）。完整根因+无 sudo 修复见 `（本地笔记存档）`「09-10 事故」节：手动 make 编译 .so 顶替 `/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/` 下同名文件即可。
 > 验证：`hyprpm add` 还可追加 `[git rev]` 参数（见 `hyprpm --help`）。
 
 验证已加载：`hyprctl plugins list` 应含 `Plugin scrolloverview`；`hyprpm list` 里 `scrolloverview enabled: true`。
@@ -156,6 +160,7 @@ Super+滚轮绑定来源(`/usr/share/omarchy/default/hypr/bindings/tiling.lua`)�
 > 原 Omarchy 默认 `SUPER + W` = Close window，此处 `hl.unbind` 挪到 `SUPER + Q` / `Alt + F4`。
 > 滚轮切窗绑在 **Super+Shift+滚轮**（原默认是 Super+Alt，**不是**单 Alt）。空间左右聚焦而非 `cycle_next`(Alt+Tab)，因后者**天生循环，`cyclic=false` 不生效**——滚轮是线性动作，疯狂滚会绕回打转；空间聚焦到边缘就停，不循环，适合"玩命滚"。
 > ⚠️ 注意**别改绑到 Alt+滚轮**：浏览器内嵌视频播放器会把 Alt+wheel 抢去当音量，实测冲突（bindings.lua 注释有记）。
+> 非 niri 化的快捷键（两种全屏、Windows 风格 `CTRL+ALT+DELETE`/`CTRL+SHIFT+ESCAPE`、`SUPER+L` 锁屏与 `SUPER+CTRL+L` 布局互换）统一记在 `omarchy-function-tweaks.md` §三。
 
 实现(与默认同款 dispatcher，带 description 自动进速查面板)：
 
@@ -194,6 +199,11 @@ local function table_value(value, ...)
   return nil
 end
 
+-- 绑定范围：主屏 DP-2 专用 1~3；便携屏钉住 6 号看片（见下文「多显示器适配」）。
+-- 换机器要改这三个常量。
+local MAIN_MONITOR = "DP-2"
+local MAIN_WS_MIN, MAIN_WS_MAX = 1, 3
+
 local function current_workspace()
   local ok, monitor = pcall(function() return hl.get_monitor_at_cursor() end)
   if not ok or not monitor then
@@ -204,19 +214,23 @@ local function current_workspace()
   local id = table_value(active, "id")
   if type(id) ~= "number" then return nil end
   local windows = table_value(active, "windows")
-  return { id = id, windows = windows or 0 }
+  return { id = id, windows = windows or 0, monitor = table_value(monitor, "name") }
 end
 
 local function scroll_next_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then return end   -- 已在空工作区 → 停
+  if not current or current.monitor ~= MAIN_MONITOR then return end  -- 非主屏不动作
+  if current.windows == 0 then return end        -- 已在空工作区 → 停
+  if current.id >= MAIN_WS_MAX then return end   -- 到上限 → 停，绝不越过 6 号
   hl.dispatch(hl.dsp.focus({ workspace = tostring(current.id + 1) }))
 end
 
 local function scroll_prev_workspace()
   local current = current_workspace()
-  if not current or current.id <= 1 then return end        -- 不低于 1
-  hl.dispatch(hl.dsp.focus({ workspace = tostring(current.id - 1) }))
+  if not current or current.monitor ~= MAIN_MONITOR then return end
+  if current.id <= MAIN_WS_MIN then return end   -- 不低于 1
+  -- 夹回上限：从超范围的工作区往回滚，落到 MAIN_WS_MAX，而不是落到别的屏的 6（见「多显示器适配」）
+  hl.dispatch(hl.dsp.focus({ workspace = tostring(math.min(current.id - 1, MAIN_WS_MAX)) }))
 end
 
 hl.unbind("SUPER + mouse_down")
@@ -245,18 +259,19 @@ hl.bind("SUPER + mouse_up",   scroll_prev_workspace, { description = "Previous w
 -- 移过去后窗口成了该区唯一窗口 → 停，不会连环建 3、4、5。
 local function move_next_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then return end
-  if current.windows > 1 then
+  if not current or current.monitor ~= MAIN_MONITOR or current.windows == 0 then return end
+  if current.windows > 1 and current.id < MAIN_WS_MAX then
     hl.dispatch(hl.dsp.window.move({ workspace = tostring(current.id + 1) }))
   end
 end
 
--- 移回上一个工作区：只守规则 A(不低于工作区 1)，不受窗口数限制。
+-- 移回上一个工作区：只守下限，不受窗口数限制（否则独窗会被锁死回不来）。
 local function move_prev_workspace()
   local current = current_workspace()
-  if not current or current.windows == 0 then return end
-  if current.id <= 1 then return end   -- 无工作区 0 / 负数
-  hl.dispatch(hl.dsp.window.move({ workspace = tostring(current.id - 1) }))
+  if not current or current.monitor ~= MAIN_MONITOR or current.windows == 0 then return end
+  if current.id <= MAIN_WS_MIN then return end   -- 无工作区 0 / 负数
+  -- 与 scroll_prev 同样夹回范围，避免把窗口甩到另一块屏
+  hl.dispatch(hl.dsp.window.move({ workspace = tostring(math.min(current.id - 1, MAIN_WS_MAX)) }))
 end
 
 hl.unbind("SUPER + CTRL + UP")
@@ -270,6 +285,113 @@ hl.bind("SUPER + CTRL + DOWN", move_next_workspace, { description = "Move window
 **边界行为**：某工作区只剩这一扇窗口时，按 ↓ 不会把它推进空白工作区——这是"停在空"边界（niri 一致）。如需"独窗也能推一步"，要加状态跟踪；当前 `hl` 无按 id 查窗口数的 API，只能靠**当前工作区**窗口数判定。
 
 **验证**：`hyprctl reload` + `hyprctl configerrors` 空；底层 `move { workspace = "2" }` 实测窗口移到新建 ws2、ws1 3→2，复原后 ws1=3。停边界的 Lua 判定无法用 hyprctl 模拟按键触发，需实按一步终验。
+
+### 多显示器适配（⚠️ 单屏配置接第二块屏后必修）
+
+**症状**：接上第二块屏后 Super+滚轮"失效"——主屏工作区不换、焦点被甩到另一块屏，光标没动所以反复同一个结果，看着像卡死。
+
+**根因三层**（实测坐实）：
+
+| 层 | 情况 |
+| --- | --- |
+| Hyprland | 工作区 ID **全局唯一**且**绑定在某块屏上**（不是"每屏一套 1/2/3"，那是 niri）。当时 `ws1→DP-2`、`ws2→HDMI-A-1` |
+| `focus({workspace=N})` 语义 | 是「**去 N 所在的那块屏**」，不是「在当前屏切到 N」。单屏两者等价所以看不出，双屏即跨屏跳 |
+| 本机代码 | 自写版本用裸 `current.id + 1`，没带显示器判断 |
+
+**这事不怪插件**：ScrollOverview 作者官方 recipe（`docs/wiki/Dynamic-workspaces.md`）**是按显示器过滤工作区的**（`table_value(workspace,"monitor") == monitor`）。是本机当初没照它写。omarchy 出厂默认 `focus({workspace="e+1"})` 实测**也跨屏跳**（便携屏 ws6 上滚 → 跑到主屏 ws1），同样不可依赖。
+
+**做法：分段 + 屏守卫**（不做"每屏独立编号"）
+
+| 屏 | 工作区 |
+| --- | --- |
+| 主屏 DP-2 | 专用 **1~3**，滚轮/移窗只在这段内动 |
+| 便携屏 | 钉 **6** 号专用于看片，滚轮完全不响应 |
+
+- 不用「每屏各自 1/2/3」的做法：数字工作区全局唯一，真按"每屏一套数字"去配会打断 `SUPER+1~0` 及其 SHIFT / SHIFT+ALT 变体、工作区指示器胶囊的按 id 排序、以及 `SUPER+SHIFT+ALT+方向` 移屏手势。**动态工作区必须自建、不能用全局数字**时，正解是命名工作区（`hl.workspace_rule({ workspace = "name:video", monitor = "HDMI-A-1" })`，实测接受），不是给每屏硬凑同一批数字。
+- ⚠️ 上一条不代表"多屏 niri 化只能靠这套分段"——**Hyprland 原生就有相对本屏的选择器 `r`**，见下节。
+
+**两处改动**：
+1. `~/.config/hypr/monitors.lua` 钉住便携屏的工作区：
+   ```lua
+   hl.workspace_rule({ workspace = "6", monitor = "HDMI-A-1" })
+   ```
+2. `~/.config/hypr/bindings.lua`：`current_workspace()` 多返回 `monitor` 字段；四个函数（scroll_next/prev、move_next/prev）统一加 `current.monitor ~= MAIN_MONITOR` 早退 + 范围钳制（代码见上两段）。
+
+**踩过的 bug（往回滚漏了上限）**：第一版只给 `scroll_next` 封了 `MAIN_WS_MAX`，`scroll_prev` 仅守 `id > 1`。于是在主屏上开了超范围工作区（当时上限是 5，开了 7 号）后往回滚 → 目标 6 → **6 钉在便携屏 → 又跳屏**（实测焦点确实跳走）。修法：`math.min(current.id - 1, MAIN_WS_MAX)` 夹回上限。`move_prev_workspace` 同病同治。**教训：单向封边界不够，反方向也要夹**。
+
+**改完必做：清掉副屏当前那个空工作区**。空工作区回收规则（实测）：
+
+| 情况 | 结果 |
+| --- | --- |
+| 是某屏**当前**的工作区，即使为空 | **保留** |
+| 非当前的空工作区 | **自动回收** |
+
+若副屏停在空的 ws2，滚轮第一次 `focus(2)` 依旧跳屏 → 把副屏切到目标工作区（如 focus ws6）让旧空工作区自然回收，或 `focus(该ws)` + `hl.dsp.workspace.move({ monitor = "DP-2" })` 搬回主屏。
+
+**验证**：`hyprctl reload` + `hyprctl configerrors` 空；主屏滚 1→2→3 停在 3；超出范围的工作区（如 ws5）往回滚被夹回 3 且 `focused` 仍在 DP-2；光标在便携屏时滚轮无反应。**别用 `hyprctl dispatch movecursor` 验证光标**（本机失效，连续两次返回同一坐标）。
+**回退**：还原 `~/.config/hypr/bindings.lua`，并删掉 `monitors.lua` 里的 `workspace_rule` 行。
+
+### 原生替代：`r` 相对选择器（每屏独立切工作区）
+
+**上面那套分段不是唯一解——Hyprland 原生就有「相对本屏」的工作区选择器。**
+
+```lua
+hl.dispatch(hl.dsp.focus({ workspace = "r+1" }))   -- 本屏下一个
+hl.dispatch(hl.dsp.focus({ workspace = "r-1" }))   -- 本屏上一个
+```
+
+**是内置选择器、不是巧合**：二进制含报错串 `Relative workspace on no mon!`（与 `special:`、`Invalid workspace` 同族），即该选择器**必须有 monitor 才能解析**。
+
+实测行为（出发时主屏段为 1~3、便携屏在 ws6）：
+
+| 出发 | 操作 | 结果 |
+| --- | --- | --- |
+| 主屏 ws1 | `r+1` | → ws2，**仍在本屏** |
+| 主屏 ws1 | `r-1` | **原地不动**（不跨屏、不变负数） |
+| 便携屏 ws6 | `r+1` | → ws7，**在本屏新建** |
+| 便携屏 ws6 | `r-1` ×4 | → ws5 → ws4 → ws3 → ws2，**全在便携屏新建** |
+| 便携屏 ws6（主屏已有 ws7） | `r+1` | **不抢 ws7**，在本屏新建 **ws8** |
+| 便携屏 ws2（主屏的 ws1 有窗口） | `r-1` | **原地不动**，不跨屏也不抢 |
+| 对照：`e+1` | — | **跨屏跳**（不可依赖） |
+
+**三条已坐实**：
+1. **绝不跨屏** —— 全程实测焦点都留在出发那块屏。
+2. **不抢别屏已有的号** —— 主屏有 ws7 时，便携屏 `r+1` 另建 ws8；目标号被别屏占着且有窗口时，干脆不动。
+3. **到边界就停** —— 主屏 `r-1` 在 ws1 不动（不会跑到 0/负数，也不跨屏）。
+
+**⚠️ 真正的限制：编号仍全局唯一。** 上表第 4 行就是证据——便携屏从 6 往回滚，**吃掉了 5、4、3、2 这些号**（3、2 本在主屏保留段内），且这些工作区都**建在便携屏上**。后果：若之后主屏想用 ws3，`focus({workspace="3"})` 会跑到**便携屏**去。所以 `r` 是"用相对数模拟每屏独立"，**不是真·独立命名空间**（niri 才是）。
+
+**编号挑选规律**（实测推断，**未穷尽验证**）：沿方向找下一个「空闲 or 属于本屏」的号；遇到属于别屏的号就跳过；到 1 为止不再往下。上面第 5、6、8 行都符合这个模型，但只测了这几个点，别当定论。
+
+**与 `e+1` 的区别**：`e` = 相对**全局**编号（会跨屏）；`r` = 相对**本屏**（不跨屏）。
+
+> 本机为何仍用分段而不是 `r`：分段**有边界**（滚到底停、不无限造号），且用户要的就是"便携屏完全不响应滚轮"。`r` 适合"每屏各自无限滚动"那种需求——但要接受上面那个"吃号"的问题。
+
+### 列式滚动布局（`scrolling`，hyprscroller 已上游化）
+
+**`hyprscroller` 不再是外挂插件**——已并入主线。本机 0.56.2 二进制含 `Layout::Tiled::CScrollingAlgorithm`，官方 wiki 有独立页（`Configuring/Layouts/Scrolling-Layout/`，"windows get positioned on an infinitely growing tape"）。
+
+```lua
+hl.config({ general = { layout = "scrolling" } })
+```
+
+> omarchy **已经为它铺好路**：① `~/.config/hypr/looknfeel.lua` 顶部注释区有现成的 `layout = "scrolling"` 示例（写着 "Change to niri-like side-scrolling layout"），取消注释即可；② 出厂默认 `/usr/share/omarchy/default/hypr/looknfeel.lua` 里**已预调** `scrolling = { column_width = 0.49 }`（≈半屏减间隙，正好两列并排）。所以本机 `hyprctl getoption scrolling:column_width` 读到的是 **0.49**（omarchy 设的），不是上游文档写的默认值 0.5。
+
+配置块 `scrolling`（活动值可直接读：`hyprctl getoption scrolling:<key>`）：
+
+| 键 | 上游默认 | 说明 |
+| --- | --- | --- |
+| `column_width` | 0.5（**本机 0.49**，omarchy 预调） | 列宽 |
+| `direction` | right | 新窗口出现/滚动方向 |
+| `focus_fit_method` | 1 | 0=居中，1=适配 |
+| `follow_focus` | true | 聚焦时自动滚入视野 |
+| `follow_min_visible` | 0.4 | 聚焦跟随要求的可见比例 |
+| `wrap_focus` / `wrap_swapcol` | true | 首尾环绕 |
+| `fullscreen_on_one_column` | true | 单列占满屏 |
+
+按工作区覆盖：`hl.workspace_rule({ workspace = "2", layout_opts = { direction = "right" } })`；窗口规则 `scrolling_width`；消息 `hl.dsp.layout("move +col" | "swapcol l" | "fit active" | "focus l" | "promote" | "consume" | "expel")`。
+
+⚠️ **本机未启用、未实测**（仅确认二进制 + 文档存在）。启用会**改变全局布局**，是大改动，动前先备份并准备回退。
 
 ## 七、验证命令
 
@@ -326,7 +448,7 @@ scrolloverview 是 **Hyprland 原生插件**（yayuuu/hyprland-scroll-overview�
 3. **开纵向动画** — `looknfeel.lua` 里把 `workspaces` 动画打开、`style = "slidevert"`（默认关着，所以现在是硬切）。
 4. **配键位** — `bindings.lua` 按第六节的表配好 Super+Tab / PageUp / PageDown / Super+滚轮 / Super+Ctrl+↑↓ 等。
 
-**最容易踩的六个坑**：
+**最容易踩的七个坑**：
 
 1. **触发总览必须用 Lua 函数**：`hl.plugin.scrolloverview.overview("toggle all")`。写成字符串 `"scrolloverview:overview toggle all"` 会走 `exec_cmd`，看着像成功，实际按了毫无反应。
 2. `workspaces` 动画默认关闭 —— 这就是切工作区"傻快"的原因。
@@ -334,6 +456,7 @@ scrolloverview 是 **Hyprland 原生插件**（yayuuu/hyprland-scroll-overview�
 4. `hyprctl getoption animation:*` 查不到动画、`hyprctl dispatch` 只认 Lua 表达式 —— 都是这版的正常现象，别当故障。
 5. 查某个键有没被占用，用 `hyprctl -j binds` 解析，**别用 `grep -B`**（上下文会串行，看串）。
 6. 移窗到工作区：`e+n` 只跳已打开的（只有一个工作区时静默无效）、`+n` 会无限连环建空工作区。要"停在空边界"得自写 Lua 判断 —— 前进卡窗口数、回退只守下限。
+7. **多屏会废掉第 6 条那套**：Hyprland 工作区 ID 全局唯一且绑在各自屏上，`focus({workspace=N})` 是"去 N 所在的屏"。所以接第二块屏后必须给绑定加**屏守卫 + 范围钳制**（第六节「多显示器适配」），否则焦点乱跳。**原生出路**：`focus({workspace="r+1"/"r-1"})` = 相对本屏、不跨屏（但无边界）；布局层则有已上游化的 `scrolling`。
 
 ---
 
@@ -342,6 +465,7 @@ scrolloverview 是 **Hyprland 原生插件**（yayuuu/hyprland-scroll-overview�
 > 以下为原部署机的实施细节与历史，仅供排查/复刻参考，不随通用教程迁移。
 
 - **原 Hyprland 版本**：0.56.2（tag 版）。插件仓库 `hyprland-scroll-overview`(yayuuu) 当时 commit `5e96ae20ec73`（`/var/cache/hyprpm/jianlongliu/hyprland-scroll-overview/state.toml` 可查）。换机器以你实际版本为准。
+- **本机多屏选择**：用**分段 + 屏守卫**（主屏 `MAIN_MONITOR="DP-2"`、`MAIN_WS_MIN/MAX=1/3`；便携屏 `HDMI-A-1` 钉 ws6 看片），**没用**原生的 `r±1`——因为要"有边界 + 副屏完全不响应"。原生 `r` 与 `scrolling` 布局本机**均未启用**。
 - **本机工作区指示器**：克隆 `omarchy.workspaces` → `jianlongliu.workspaces`（GNOME 45 圆点/胶囊），见 `omarchy-visual-tweaks.md` §3.1。
 - **本机 bar 菜单**：出厂 `omarchy.menu`（面板仍由 `keepLoaded` 挂载，apps 正常），bar 上的按钮换成自建插件 `jianlongliu.arch-logo`（Arch logo 染成前景色），见 `omarchy-visual-tweaks.md` §4.1。
 - **角落热区**：曾自研 Hyprland 插件 `hyprcorner`，**已删除且不恢复**，现用第三方 `abdul.hotcorners`（macOS 风格，rest pointer 触发命令，可配四角动作触发 scrolloverview 总览）。

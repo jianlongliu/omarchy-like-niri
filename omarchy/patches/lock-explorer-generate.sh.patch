@@ -1,0 +1,140 @@
+diff --git a/plymouth/custom/generate.sh b/plymouth/custom/generate.sh
+index ea7113e..b027460 100755
+--- a/plymouth/custom/generate.sh
++++ b/plymouth/custom/generate.sh
+@@ -65,11 +65,51 @@ entry=$(val entry pill);          entry_y=$(val entry_y 72);      entry_w=$(val
+ entry_x=$(val entry_x 50);        entry_wp=$(val entry_wp 0);     entry_hp=$(val entry_hp 0)
+ entry_align=$(val entry_align center)
+ hint=$(expand_vars "$(val hint "")")
++# The wait after the passphrase. On a design snapshot the wait grows a line
++# down the design's own panel divider (auto finds that edge in the picture, so
++# nothing is added that the design does not already have); off keeps the old
++# spinner, and a number pins the edge by hand as a percent of the width.
++wait_line=$(val wait_line auto);  wait_line_w=$(val wait_line_width 6)
+ 
+ accent_i=$(hex_ints "$accent_t"); bg_i=$(hex_ints "$bg_t")
+ fg_f=$(hex_floats "$fg_t"); dim_f=$(hex_floats "$dim_t"); bg_f=$(hex_floats "$bg_t")
+ title_f=$(hex_floats "$title_c"); subtitle_f=$(hex_floats "$subtitle_c")
+ 
++# X of the strongest vertical edge in the middle of a picture, as a percent of
++# its width -- the divider between a wallpaper and a design's own panel. The
++# picture is treated as the full 3840x2160 canvas the theme script maps onto
++# the screen, so the percent carries over unchanged. Three bands have to agree
++# (a busy wallpaper cannot fake an edge twice), otherwise nothing is printed
++# and the caller falls back to the plain spinner.
++panel_edge_x() {
++  local img=$1 w band y x hits=()
++  w=$(magick identify -format '%w' "$img")
++  for f in 30 50 70; do
++    y=$(awk -v f=$f 'BEGIN{ printf "%d", 2160*f/100 - 2160*0.075 }')
++    band=$(awk 'BEGIN{ printf "%d", 2160*0.15 }')
++    x=$( { magick "$img" -crop "${w}x${band}+0+${y}" +repage -resize "${w}x1!" -depth 8 txt:- |
++      awk -F'[,:() ]+' '
++        /^[0-9]+,[0-9]+:/ {
++          l = 0.2126*$3 + 0.7152*$4 + 0.0722*$5
++          if (prev != "") { d = l - prev; if (d < 0) d = -d
++            if (d > best) { best = d; bx = $1 } }
++          prev = l
++        }
++        END { if (best >= 20) print bx }'; } 2>/dev/null || true )
++    if [[ -n $x ]]; then hits+=("$x"); fi
++  done
++  (( ${#hits[@]} >= 2 )) || return 0
++  local a b d bestd=99 best=""
++  for a in "${hits[@]}"; do
++    for b in "${hits[@]}"; do
++      d=$(( a > b ? a - b : b - a ))
++      if (( d < bestd )); then bestd=$d; best=$(( (a + b) / 2 )); fi
++    done
++  done
++  (( bestd <= 6 )) || return 0
++  awk -v x="$best" -v w="$w" 'BEGIN{ printf "%.2f", 100 * x / w }'
++}
++
+ # Upper bound for a background that is otherwise passed through at its own
+ # aspect ratio. The theme is copied to the EFI partition, so an arbitrary
+ # image still needs a ceiling; a snapshot of an ordinary display is far under
+@@ -110,18 +150,39 @@ case "$entry" in
+   line) magick -size "${entry_w}x50" xc:none -draw "fill rgba($accent_i,0.8) rectangle 0,48 $entry_w,50" "$staging/entry.png" ;;
+ esac
+ 
+-# Spinner frames for the wait after the passphrase. Pre-rendered images, not
++# Frames for the wait after the passphrase. Pre-rendered images, not
+ # Image.Text: label rendering needs the font file, which is gone once
+ # switch_root drops the initramfs -- decoded images survive.
++#
++# wait_x (percent) is set when the picture has a panel edge to grow a line
++# down: the frames are then that line at twelve growing heights, full height by
++# frame 10 with a two frame fade so the loop has no cut. Without an edge they
++# stay the rotating arc, centred on the entry box.
++wait_x=""
++case "$wait_line" in
++  off) : ;;
++  auto) if [[ -f $staging/bg.png ]]; then wait_x=$(panel_edge_x "$staging/bg.png"); fi ;;
++  *)    wait_x=$wait_line ;;
++esac
++wait_h=()
+ if [[ $entry != none ]]; then
+   fg_i=$(hex_ints "$fg_t")
+-  # Loading: a rotating arc, clearly distinct from the passphrase bullets.
+-  # Pre-rendered frames -- text and font rendering die after switch_root.
+-  for i in $(seq 1 12); do
+-    a=$(( (i - 1) * 30 ))
+-    magick -size 22x22 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 3 -fill none \
+-      -draw "ellipse 11,11 8,8 $a,$((a + 120))" "$staging/spin$i.png"
+-  done
++  if [[ -n $wait_x ]]; then
++    for i in $(seq 1 12); do
++      h=$(awk -v i="$i" 'BEGIN{ g=(i-1)/10; if (g>1) g=1; printf "%d", g*2160 }')
++      a=$(awk -v i="$i" 'BEGIN{ a=0.70; if (i>10) a=0.70*(12-i)/2; printf "%.3f", a }')
++      if (( h < 2 )); then h=2; fi
++      wait_h[$i]=$h
++      magick -size "${wait_line_w}x${h}" "xc:rgba(${accent_i},$a)" "$staging/spin$i.png"
++    done
++  else
++    # Loading: a rotating arc, clearly distinct from the passphrase bullets.
++    for i in $(seq 1 12); do
++      a=$(( (i - 1) * 30 ))
++      magick -size 22x22 xc:none -stroke "rgba($fg_i,0.95)" -strokewidth 3 -fill none \
++        -draw "ellipse 11,11 8,8 $a,$((a + 120))" "$staging/spin$i.png"
++    done
++  fi
+   # One passphrase bullet; the script draws one sprite per typed character,
+   # so the row aligns exactly inside the entry box.
+   magick -size 14x14 xc:none -fill "rgba($fg_i,0.95)" -draw "circle 7,7 7,2" "$staging/dot.png"
+@@ -334,7 +395,20 @@ booting.sprite = Sprite();
+ booting.sprite.SetOpacity(0);
+ EOF
+ # Literal lines: plymouth script string+number concatenation is unreliable.
+-for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\");"; done
++# Where the wait frames go, and how fast they cycle: the line is pinned to the
++# panel edge and scales with the background (the script works in a 3840x2160
++# canvas), and a full-height fill wants a slower cycle than the little arc.
++frame_div=4; wait_pos="entry.cx - b.GetWidth() / 2, entry.cy - b.GetHeight() / 2"
++if [[ -n $wait_x ]]; then
++  frame_div=8
++  wait_pos="bg.x + bg.w * $wait_x / 100 - b.GetWidth() / 2, bg.y"
++  for i in $(seq 1 12); do
++    printf 'spin[%s] = Image("spin%s.png").Scale(%s * bg.scale, %s * bg.scale);\n' \
++      "$i" "$i" "$wait_line_w" "${wait_h[$i]}"
++  done
++else
++  for i in $(seq 1 12); do echo "spin[$i] = Image(\"spin$i.png\");"; done
++fi
+ cat <<EOF
+ 
+ fun display_password_callback(prompt_text, count) {
+@@ -373,11 +447,11 @@ fun display_normal_callback() {
+ fun refresh_callback() {
+   if (global.boot_wait == 1) {
+     global.boot_frame = global.boot_frame + 1;
+-    k = Math.Int(global.boot_frame / 4);
++    k = Math.Int(global.boot_frame / $frame_div);
+     n = k - Math.Int(k / 12) * 12 + 1;
+     b = spin[n];
+     booting.sprite.SetImage(b);
+-    booting.sprite.SetPosition(entry.cx - b.GetWidth() / 2, entry.cy - b.GetHeight() / 2, 6);
++    booting.sprite.SetPosition($wait_pos, 6);
+   }
+ }
+ 

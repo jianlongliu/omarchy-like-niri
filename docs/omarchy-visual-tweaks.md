@@ -1,7 +1,7 @@
 # Omarchy bar 视觉与克隆整合笔记
 
-> 最后核对：2026-09-11 · Omarchy 4.0.3 / Hyprland 0.56.2
-> 整合原分散的本地 bar 视觉笔记（字号/对齐、克隆插件、工作区胶囊/磨砂玻璃、字体链、flea 对齐），去重后重排。相关总文档：`omarchy-nirification.md`；插件清单见 `omarchy-plugins.md`。
+> 最后核对：2026-09-15 · Omarchy 4.0.3 / Hyprland 0.56.2
+> 整合 （本地笔记存档） 原分散的 bar 视觉笔记（字号/对齐、克隆插件、工作区胶囊/磨砂玻璃、字体链、flea 对齐、GTK 应用对齐），去重后重排。相关总文档：`omarchy-nirification.md`；插件清单见 `omarchy-plugins.md`。
 > 本机 bar：`charlieras262.floating-bar`（`Bar.qml`）；Hyprland 层规则在 `~/.config/hypr/apps/omarchy-shell.lua`；透明底在 `~/.config/omarchy/shell.toml`。
 
 ## 〇、公共前置（各节通用，先读）
@@ -26,6 +26,13 @@
 - 一键重置：`omarchy refresh shell`（自动备份当前配置再拷默认）。
 - `omarchy theme set` 会重置 `base-size`；整栏不对劲先查 `shell.toml` base-size 是否 14。
 
+### ⚠️ 改 `environment.d` 后要**重启**，注销无效
+`environment.d` 只在 **systemd user manager 启动时**读一次，之后由它下传给子进程。
+**注销不会结束 user manager**（它跨登录存活），所以新起的 Hyprland 仍旧继承旧变量；
+`systemctl --user unset-environment` 也清不掉——omarchy `autostart.lua` 会 `import-environment` 回灌。
+
+**验证**：`echo $变量名` 与 `tr '\0' '\n' < /proc/$(pgrep -x Hyprland)/environ | grep 变量名` 都为空才算生效。
+
 ---
 
 ## 一、图标 / 字号微调
@@ -48,7 +55,95 @@
 
 **回退**：克隆的 keyboard-layout/system-update 用 `omarchy plugin remove jianlongliu.<id>` 或删目录并把 shell.json id 改回 `omarchy.<id>`；图标插件改回原组件。
 
+### 1.3 ⚠️ 右侧状态图标是字体字形 —— 换字体别选 Mono 变体
+**事实**：`omarchy.microphone` / `omarchy.bluetooth` / `omarchy.network` / `omarchy.audio` / `omarchy.monitor` 以及 `jianlongliu.indicators` 里的图标**不是 SVG**，是 Nerd Font 的 MDI 字形（私用区 U+F0001–U+F1AF0），走 `Style.fontFamily = "monospace"`（`/usr/share/omarchy/shell/Commons/Style.qml:270`）。`omarchy font set` 改的就是这个 monospace 别名（写 `~/.config/fontconfig/fonts.conf`）。字体链见 §八。
+
+**坑**：`omarchy font list` 里带 **`Mono` 后缀**的变体为保等宽，把每个图标**等比压进同一窄格** → 长宽比不同的图标墨迹高矮从 11px 到 22px 不等，右侧一排看着「有大有小」；tray / mihomo / 截图等 SVG 图标不受影响，对比之下更刺眼。
+
+**规则**：`omarchy font set "X Nerd Font"` —— **不带 `Mono` 后缀**。
+
+| 同一字形墨迹宽×高（24pt） | Mono 变体 | 非 Mono 变体 |
+|---|---|---|
+| 麦克风 󰍬 | 15×20 | 15×20 |
+| 显示器 󰍹 | **15×14** | 23×21 |
+| Wi-Fi 󰖂 | **15×11** | 23×16 |
+| 音量 󰕾 | 15×15 | 18×18 |
+
+**不会撑歪终端**：两变体的 ASCII 单元格与图标步进都是 14（24pt），8 个图标连写宽度 = 8 个 `M` = 117px，只有墨迹大小不同。
+
+- **生效**：字体在 shell **启动时**解析 → 改完必须 `omarchy restart shell`。
+- **验证**：`omarchy font current`、`fc-match monospace`。
+- **复发排查**：`omarchy theme set` 或重跑 `omarchy font set` 会重写 `fonts.conf`；图标又不齐就先看是不是被换回 Mono 了。
+
+**换成 Material Symbols（已落地，走「替身字体」）**：
+
+改的**不是插件，是字体**——把底字体 `GoogleSansCodeNerdFont-Regular.ttf` 里的 140 个私用区字形就地替换成 Material 轮廓，再把 `monospace` 别名指过去。一行 fontconfig → bar / 菜单 / 所有走该别名的面（含第三方插件图标）一次性生效；终端不受影响（字体名写死在 ghostty/alacritty 配置里）。
+
+| 项 | 值 |
+|---|---|
+| 字体 | `~/.local/share/fonts/GoogleSansCodeMaterial-Regular.ttf`（族名 `GoogleSansCode Material`） |
+| 别名 | `~/.config/fontconfig/fonts.conf` 的 `prepend_first` 一行 |
+| 换掉 | 140 个（映射表见 `tmp-material-bar-icons/nerd_to_material.py`） |
+| 保留 Nerd | 17 个品牌图标（apple / google / discord / arch / docker … Material 无对应 logo） |
+| 效果 | ASCII 逐像素不变，只有图标字形变；尺寸中位 1.15× |
+
+- **⚠️ 观感预期**：**bar 上几乎看不出变化**——只有 4 个图标走字体（蓝牙 0.84 / 音量 0.85 新旧几乎一样，wifi 0.50 / 显示器 0.60），且只有 24 物理 px。菜单换了 39%（174 个码位里 68 个），但菜单是弹一下就走的面板。**这次迁移的价值是血统统一 / 可维护性，不是换脸**；真正解决「图标有大有小」的是换成**非 Mono 变体**那一步，跟 Material 无关。
+- **为什么看着差不多**：Nerd 的 `md-*` 就是 Material Design Icons，Material Symbols 是它的后继，同源设计 → 大部分图标几乎一样。全量 140 个的 IoU 中位 0.53，但要看出差别得逐个放大比。
+- **坑**：① `getBestCmap()` 改了不写回，必须遍历 `font["cmap"].tables` 改 `table.cmap[cp]`；② 多个 Nerd 名共用一个 Material 名（`image`/`image_move`）会互相覆盖，字形名要带码位；③ 尺寸参照用**原字形包围盒**，不能用单元格宽（Nerd 字形本就溢出）。
+- 完整流程 / 量化方法 / 回退见 `tmp-material-bar-icons/README.md`（**临时稿**，用户暂定不并入本文）。
+
+> 早期「克隆 4 个面板 + 覆盖 `fontFamily` + 连字名」的路线已废弃（改动仍在 `~/.config/omarchy/plugins/jianlongliu.{bluetooth,network,audio,monitor}`，但 shell.json 已切回出厂 `omarchy.*`、克隆全部 disable，可直接 remove）。
+
+**其它两路为什么不走**：
+- `omarchy font list` 只列 `spacing=100` 等宽字体（`/usr/share/omarchy/bin/omarchy-font-list`），比例图标字体进不了菜单，`omarchy font set` 也切不过去。
+- 直接填 Material 码位不行：Material 在 BMP 私用区（`bluetooth`=U+E1A7 / `wifi`=U+E63E / `mic`=U+E31D，共 4284 个），而 GoogleSansCode NF 自己在 U+E63E / U+E3AB / U+E31D / U+EC08 有字形 → 会画出怪东西。替身字体法按**码位**替换所以不受此限，但换完别再用连字名。
+- `omarchy font set` 会重写 `fonts.conf`，把上面那行别名覆盖掉，需重设。
+
 ---
+
+### 1.4 桌面图标主题（MacTahoe）与 Arc Dock 图标锯齿
+> 最后核对：2026-09-16 · Omarchy 4.0.4
+
+**现状**：`gsettings get org.gnome.desktop.interface icon-theme` = **`MacTahoe`**（用户级 `~/.local/share/icons/MacTahoe{,-light,-dark}`，只服务 **Arc Dock + Nautilus**）。
+
+**为什么一条 gsettings 能同时管两者**：
+
+| 使用方 | 取图路径 |
+|---|---|
+| Nautilus（GTK4） | 直接读 `org.gnome.desktop.interface icon-theme` |
+| Arc Dock（`io.github.claudsondouglas.arcdock`） | `Quickshell.iconPath()` → Qt 图标查找 → 本机 `QT_QPA_PLATFORMTHEME=gtk3` → 同一个 GTK 设置 |
+
+**图标主题会被「套主题」重置 —— 真源是主题自己的 `icons.theme`**：`omarchy-theme-set` 先把主题目录 `cp -r` 进 `~/.local/state/omarchy/current/theme/`，再跑 `omarchy-theme-set-gnome`，**后者读那份 state 副本的 `icons.theme` 覆盖 gsettings**（该文件不存在才回落 `Yaru-blue`）。所以要让改动持久，改的是 `~/.config/omarchy/themes/<主题>/icons.theme`（本机 `tonal-spot` / `expressive` 均已写 `MacTahoe`，state 副本同步）；`materal-update` 只重写 `colors.toml`，**不碰** `icons.theme`。**残余风险**：切到库存主题（`/usr/share/omarchy/themes/*`，各自写死 `Yaru-*` 且只读）仍会被换掉，要彻底锁死只能加 `~/.config/omarchy/hooks/theme-set.d/` hook（hook 在 `omarchy-theme-set-gnome` **之后**执行，顺序正好）。
+
+**三套变体别指望**：app 图标在三套里是**同一份文件**（`zen-browser.svg` md5 三套一致），差异只在 places/UI 图标（文件数 27981 / 3737 / 14260）→ 把 `icon-theme` 换成 `MacTahoe-light` 后 dock 截图 **RMSE = 0**（逐像素一致），已切回 `MacTahoe`。
+
+**dock 出现「首字母方块」**（例：自建 `~/.local/share/applications/colamd.desktop`，`Icon=colamd`）：dock 的图标查找**只认当前激活主题**——`hicolor` 虽然写在主题 `Inherits` 链里，实际不被走。
+**解法**：把图标复制进 `~/.local/share/icons/<当前主题>/apps/scalable/`（该目录已声明 `Type=Scalable / MinSize=16 / MaxSize=512`，放 PNG 也能正常缩放）→ `gtk-update-icon-cache -f -t <主题>` → `omarchy restart shell`。**重装图标主题会丢，需重 cp**。
+
+本机手动塞过 / 换过的图标（都在各主题的 `apps/scalable/`）：
+
+| 图标名 | 处理 | 原因 |
+|---|---|---|
+| `omarchy.svg` | 覆盖成白色 Arch A | dock 右端启动按钮（细节见 §4.1） |
+| `colamd.png` | 新增 | 自建 desktop 条目（`Icon=colamd`）在 hicolor 里有图但 dock 查不到 |
+| `qq.png` | 换官方彩色企鹅，**移除同目录 `qq.svg`** | MacTahoe 的 `qq.svg` 是「企鹅画在**近白圆角板**上」= macOS 原版：实测该区域 **29.8% 像素 ≥240**（同尺寸 VS Code 0%、Zen 6%）→ 深色 dock 上看着"过曝"；换后 **11.2%**、区均值 168 → 94.5 |
+
+> **判"某枚图标过曝"的方法**：量该图标区域里灰度 **≥240** 的像素占比（`grim` 抓 dock → `magick … -crop … -colorspace Gray -depth 8 gray:-` → 计数）。占比远高于旁边图标 = **图标自身底板就是亮的**，不是渲染问题，换掉那枚图标即可。原 `qq.svg` 备份在 `~/.local/share/mactahoe-icon-overrides-backup/`。
+
+**dock 图标锯齿（细白线图标最明显，如 Zen 的同心环）**：图标取图尺寸 = `显示尺寸 × magnifyScale × DPR`。本机 `~/.config/omarchy/arc-dock.json` 的 `magnifyScale = 200` → 取 **166px** 却只显示在 **83px** 上 = **2 倍缩小**，双线性缩小把 SVG 的抗锯齿丢掉了。
+**修法**：`plugins/io.github.claudsondouglas.arcdock/ArcSlot.qml` 里图标 `Image`（约 388 行）加 **`mipmap: true`** —— 本地补丁，见 `omarchy-plugins.md` §8.1。⚠️ 只在 ≥2 倍缩小（`magnifyScale > 150`）时才生效，≤150 时等于没加。
+
+**过曝嫌疑（非渲染）**：`glassOpacity` 只有 20%（Background 段可调）时玻璃极透，背后亮内容会把整条 dock 洗白；作者的官方预览是在**空工作区 + 深色壁纸**上抓的（`docs/preview.sh`，会临时开 `printMode`、切空工作区、抓完自动还原；注意它是按**逻辑坐标**抓 → 本机 1200x500 会得到 1920x800）。
+
+**验证法**：
+```bash
+gsettings get org.gnome.desktop.interface icon-theme      # 期望 MacTahoe
+hyprctl layers -j | jq -r '..|objects|select(.namespace?=="arc-dock")|"\(.x),\(.y) \(.w)x\(.h)"'
+grim -g "<上面那串>" /tmp/dock.png
+magick /tmp/dock.png -crop 88x88+X+Y +repage -filter point -resize 500% /tmp/dock-5x.png   # 5 倍点放大看台阶
+```
+**AA 量化（别靠肉眼）**：环区中间灰像素（100<v≤200）计数，`mipmap` 前 **752** → 后 **936**（+24%），白像素 767 → 728。
+
 
 ## 二、克隆插件实例
 
@@ -91,11 +186,38 @@ PanelWindow {
 
 **回退**：`omarchy plugin disable jianlongliu.osd && enable omarchy.osd`（回官方全屏版→全屏糊 bug）；或 `omarchy refresh config`。
 
-> **⚠️ 复发排查（2026-09-07 亲历）**：某次 update/refresh/theme 重置 shell.json 会把克隆踢掉——`jianlongliu.osd` 变 `disabled`、出厂 `omarchy.osd` 顶上跑全屏，OSD 又没磨砂。**快速自检**：`omarchy plugin list | grep osd`，看到 `jianlongliu.osd disabled` + `omarchy.osd enabled` 即此因。**修法**：`omarchy plugin enable jianlongliu.osd`（克隆自动 `addDisabled(omarchy.osd)`），`omarchy restart shell` 后验证 surface 变卡片（`hyprctl layers -j` 里 `omarchy-osd` 约 324×75 贴底，非 2400×1350 全屏）。克隆机制：非 first-party 的 `jianlongliu.*` 必须进 shell.json `plugins` 才启用（PluginRegistry.isEnabled 第 136-138 行），启用克隆时自动禁用源。
+> **⚠️ 复发排查（2026-09-07 亲历）**：某次 update/refresh/theme 重置 shell.json 会把克隆踢掉——`jianlongliu.osd` 变 `disabled`、出厂 `omarchy.osd` 顶上跑全屏，OSD 又没磨砂。**快速自检**：`omarchy plugin list | grep osd`，看到 `jianlongliu.osd disabled` + `omarchy.osd enabled` 即此因。**修法**：`omarchy plugin enable jianlongliu.osd`（克隆自动 `addDisabled(omarchy.osd)`），`omarchy restart shell` 后验证 surface 变卡片（`hyprctl layers -j` 里 `omarchy-osd` 约 324×75 贴底，非 2400×1350 全屏）。克隆机制：非 first-party 的 `jianlongliu.*` 必须进 shell.json `plugins` 才启用（PluginRegistry.isEnabled 第 136-138 行），启用克隆时自动禁用源。**如果重置的是整个 shell.json（bar 布局一起没了，不只 OSD）→ 别一个个 enable，直接按 `omarchy-plugins.md` §8.3 从 `shell.json.bak.*` 整份捞回来。**
 
 ---
 
 ## 三、视觉效果
+
+### 3.0 视觉参数：真源与共享（改视觉前先读）
+**准则**：一类值只留**一个真源**，其余由它派生；发现第二份硬编码就合并，别各自维护。
+
+**omarchy 原生就能共享的（能派生就别手写）**
+
+| 机制 | 覆盖 | 出处 |
+|---|---|---|
+| Hyprland 运行时值回拉 | `cornerRadius` ← `decoration:rounding`；`gapsOut` ← `general:gaps_out` 的一半 | `Commons/Style.qml:11-17`（启动/主题应用时 `hyprctl getoption`） |
+| 颜色 `段.键` 引用 | 主题发 `[hyprland] active-border*`，各段写 `border = "hyprland.active-border-foreground"` 即可引用 | `Commons/Border.qml:37 resolveValueRef()` |
+| 段内键回退链 | `[controls]` 的 hover/focus ← normal；字号由 `[font] base-size` 乘系数派生 | `Commons/Style.qml:54-92` |
+| 主题模板 `{{ }}` | colors.toml 里任意 key（含 matugen 派生色如 `lighter_background`） | `themed/shell.toml.tpl` |
+
+**原生盖不到、必须手工同步的（共 3 处，改一处就要顾另一处）**
+
+| 参数 | 为什么原生不行 | 现况 |
+|---|---|---|
+| 各 surface `background-alpha` | `Color.qml:35 pickAlpha()` 只吃字面数字，读到 `段.键` 会 `Number()` 失败并回落 1.0——引用机制只给颜色用 | 6 处：bar 0.5 / popups 0.58 / notifications 0.6 / menu 0.65 / launcher 0.6 / tooltip 0.8 |
+| `[popups]`、`[menu]` 的 `border-width` | `Border.qml:111 valueOr()` 只做段内回退（`border-width-top` → `border-width`），不跨段继承 | 与窗口 `general:border_size`（4）同值、手写复制 |
+| `looknfeel.lua` 的 blur/rounding | hypr 侧配置，与 shell.toml 两套体系，原生不互通 | 单文件单块 → 本身已是单源 |
+
+**改一处时的同步清单**
+
+- **圆角 / 窗口边框宽**：只改 Hyprland（`decoration:rounding` / `general:border_size`）。浮栏环宽自己 probe、面板圆角由 `Style.cornerRadius` 镜像 —— 都自动跟。但 `shell.toml` 里那两处 `border-width` 不会跟，要一并改（或干脆删掉让默认值接管）。
+- **玻璃透明度**：6 个 alpha 相互独立，**只能逐个改**，改完 `omarchy restart shell`（`[menu]` 段是共享的：clipboard / emojis / reminders 一起变）。
+- **模糊强度 / 开关**：只改 `looknfeel.lua` 基础块 + `hyprctl reload`。
+- **主题色、边框色**：不用改任何东西（matugen 派生）。
 
 ### 3.1 工作区指示器：GNOME 胶囊（jianlongliu.workspaces）
 **目标**：嵌在顶栏内的纯圆点胶囊——当前轻微拉长、其余小圆点，无数字/无边框/无厚重背景。同色**单前景**，靠 alpha 明暗分级（不搞多彩，用户嫌花哨）。
@@ -114,11 +236,37 @@ PanelWindow {
 - **动画**：宽 `Behavior NumberAnimation 220ms Easing.OutBack overshoot:1.2`（胶囊展开轻微过冲回弹、收起平滑）；色 `ColorAnimation 160ms InOutCubic`。
 - 点击：`MouseArea` 单击 `focusWorkspace(id)`（`hyprctl dispatch hl.dsp.focus`，`Util.shellQuote` 包裹）。
 
-**踩过的坑**：①必须撑满 bar 高才垂直居中 ②尺寸 0.14 太细/0.48 太大/**0.28 最终** ③用前景 alpha 别用 `Color.accent`（会蓝/彩） ④无数字无外框 ⑤点击静默无 hover 放大。
+**踩过的坑**：①必须撑满 bar 高才垂直居中 ②尺寸 0.14 太细/0.48 太大/**0.28 最终** ③用前景 alpha 别用 `Color.accent`（会蓝/彩） ④无数字无外框 ⑤点击静默无 hover 放大 ⑥**槽位别用固定填充**（见下「槽位规则」） ⑦**尾部留白要动态补**（见下「间距规则」）。
 **过冲回弹体感 ≈ 0**：13px 点 + 220ms 里那点 OutBack 过冲，肉眼几乎感知不到——同形态的视觉/动画天花板很低。**要更明显的"活"须换形态**（如悬停浮卡），不在点里继续调。
 **GNOME 标准已回退**：GNOME 未选中缩放 0.75×、当前满尺寸 → 大小不一破坏统一，仅借用紧凑点距(`dot*0.5`≈6.5 逻辑px；GNOME 固定 5px 不随 bar 缩放)。
 
-**调参表**：圆点 `dot`(0.28×，下限 7px) · 拉长 `expanded`(2.6×) · 间距 `spacing`(0.5×) · 空 `@0.15` · 占用 `@0.62` · 当前 `@0.9`(悬停`@1.0`) · 非当前悬停 `@0.85` · 宽动画 OutBack 220ms(over 1.2) · 色动画 160ms。
+**调参表**：圆点 `dot`(0.28×，下限 7px) · 拉长 `expanded`(2.6×) · 间距 `spacing`(0.5×) · 空 `@0.15` · 占用 `@0.62` · 当前 `@0.9`(悬停`@1.0`) · 非当前悬停 `@0.85` · 宽动画 OutBack 220ms(over 1.2) · 色动画 160ms · 尾部留白 `Style.space(8)`≈9px（仅无标题时）。
+
+#### 槽位规则：`workspaceIds()` 决定"画几个点"
+
+| 情况 | 上屏？ |
+|---|---|
+| 有窗口的工作区 | ✅ 占用色 |
+| 当前工作区（哪怕它是空的） | ✅ 胶囊 |
+| 空工作区（Hyprland 不会自动回收，会留下残留） | ❌ **不上屏**，否则中间挂一串暗点 |
+| 列表末尾 | 补 **1 个空槽**代表"下一个工作区"，点击即新建 |
+
+- **别再用固定填充数组**：上游 `omarchy.workspaces` 写死 `[1,2,3,4,5]`，克隆初期是 `[1,2,3]` → 只开 ws1+ws6 时会渲染成 `1,2,3,6`，中间 2、3 是**凭空冒出来的暗点**。这就是"多开工作区就出 bug / 中间有空白工作区"的根因。
+- 空槽只在**末尾**补（仅当末位有窗口时补 `last+1`），所以中间永远不会留空。
+- `id<=10` 的截断已去掉，超过 10 个工作区也不会漏点。
+
+#### 间距规则：与右侧窗口名字之间的空隙
+
+bar 的模块列表是 **`Row { spacing: 0 }`**（浮栏 `charlieras262.floating-bar/Bar.qml:1666`、`1684`；内建 `Bar.qml` 同款）→ **widget 之间的空隙全靠各自的内边距**。胶囊右边紧挨着 `omarchy.active-window`，它自己带 `Style.space(8)` 左边距，**但它切到空白工作区时会整块隐藏、宽度归零**：
+
+| active-window 状态 | 胶囊尾部留白 |
+|---|---|
+| 有窗口标题 | `0`（对方已自带左边距，不必重复） |
+| 空白工作区（宽度归零） | `Style.space(8)` ≈ **9px** |
+
+- 判定用 `ToplevelManager.activeToplevel` **复刻 active-window 的 `visible` 条件**（`title \|\| appId` 非空），两边必须一致否则会不同步。
+- 症状复现：切到空白工作区后 ai-subs 直接贴上胶囊（实测起点 x 由 398 → 94）= 用户报的「窗口名字没了 + ai sub 间隔窄」——**是同一个原因，不是两个 bug**。
+- ⚠️ 该判定依赖 active-window **仍然在 bar 布局里**；哪天把它从 bar 上拖走，有标题时也会贴住。
 
 **验证**：`omarchy restart shell` 后截图核对——`grim -o "$(hyprctl monitors -j | python3 -c 'import sys,json;print(json.load(sys.stdin)[0]["name"])')" /tmp/bar.png` 再裁 bar 左放大。日志确认：`journalctl --user -n 30 | grep jianlongliu.workspaces` 应见 `Local plugin changed, reloading: jianlongliu.workspaces`，无 QML 报错。
 > **下一步候选（未做）**：悬停浮卡 = 每个 ws 点 hover 弹 `PopupCard` 显示该 ws 窗口**几何线框**+标题。已探明**中低工作量、单文件**——复用 `/usr/share/omarchy/shell/Ui/PopupCard.qml`(`triggerMode:"hover"`，锚定自动避边，范本见 `services/media/BarWidget.qml:104`)，窗口数据走 `toplevels.values` 遍历 + `hyprctl clients -j`(含 address/class/title/geometry)，按 `hidden` 过滤。真像素缩略图才是中高工作量(需 portal 抓帧)，先不做。做前先 `cp Workspaces.qml` 备份。
@@ -127,7 +275,7 @@ PanelWindow {
 > 与 `omarchy-nirification.md` 互补不冲突：那个管切换交互（ScrollOverview），这个管 bar 上指示器外观。
 
 ### 3.2 悬浮栏：圆角暗角修复
-> 本机 bar 是第三方 `charlieras262.floating-bar`，**git clone 目录，`omarchy update` 不覆盖**，靠 `omarchy plugin update charlieras262.floating-bar` 更新（走 omarchy 通道）。⚠️ 每次更新后 blur/暗角可能变化——1.4.0 起 bar 表面改读 `Style.shellOpacity`（需装 Omablur + 系统 Style.qml 注入该行，见 §3.3 现状）。**4.0.3（2026-09-10）**：浮栏已是最新上游（`5e7dc23`）；内置 Bar.qml 新增 `PluginBarApi` + `fallbackBarWidgetRegistry` 兼容第三方完整 bar，**无需等浮栏适配**。
+> 本机 bar 是第三方 `charlieras262.floating-bar`，**git clone 目录，`omarchy update` 不覆盖**，靠 `omarchy plugin update charlieras262.floating-bar` 更新（走 omarchy 通道）。⚠️ 每次更新后 blur/暗角可能变化——上游 1.4.0 起 bar 表面改读 `Style.shellOpacity`（且先把背景 alpha 强制成 1），而该 token 已随 Omablur 一起废弃 → **本机已打补丁改回吃主题 `[bar] background-alpha`**（2026-09-16，见 §3.3 现状）。**4.0.3（2026-09-10）**：浮栏已是最新上游（`5e7dc23`）；内置 Bar.qml 新增 `PluginBarApi` + `fallbackBarWidgetRegistry` 兼容第三方完整 bar，**无需等浮栏适配**。
 
 **① 圆角暗角（已修复，保留）**：悬浮栏四角有暗色模糊残影。根因：bar 的 layer-surface 是完整矩形、QML 用 radius 裁角使四角全透明，但 blur 规则**没带 `ignore_alpha`** → Hyprland 对整块矩形（含透明角）blur，透明角仍糊背景。修复（`omarchy-shell.lua` 第 7 行）：
 > ⚠️ **五彩琉璃外描边**（2026-09-09，颜色/宽度均镜映窗口，与 matugen 一体）见 **§7.2**；勿在 bar 里写死边框色。暗角修复本身继续保留。
@@ -143,19 +291,16 @@ hl.layer_rule({ match = { namespace = "omarchy-bar" }, blur = true, blur_popups 
 **③ widget 间水平间距（2026-09-06）**：bar 各 section 把 widget 摆进 `Row { spacing: 0 }`——**间距硬编码 0、不读任何配置**，浮 bar 与原生皆然（详见「机制不足」注）。中心锚前 indicators↔CPU 太挤时，用纯配置 spacer 兜底，update 免疫：
 - 在 `shell.json` `bar.layout.center` 数组、两 widget 之间插 `{"id":"omarchy.spacer","size":16}`（`size`=px，默认 12，见 `/usr/share/omarchy/shell/plugins/bar/widgets/Spacer.qml`），改完 `omarchy restart shell`。想留 0 宽占位填 0。
 - **这是 per-位置 手动方案**，不是全局统一间距。
+- 若想**在插件里自己控制**尾部留白（动态、条件式），见 §3.1「间距规则」——工作区胶囊就是那么做的，可作为范式。
 
 ### 3.3 磨砂玻璃（Liquid Glass）恢复手册
-> 状态栏/菜单/通知/OSD 所有表面的磨砂。被 `omarchy update`/`omarchy refresh hyprland` 覆盖则按此恢复。涉及 3 个 hypr 文件 + 1 个 OSD 克隆插件 + **Omablur 的 shellOpacity 4 文件系统 patch**（见下现状注，2026-09-10 已全套执行）。
+> 状态栏/菜单/通知/OSD 所有表面的磨砂 = **三层叠加，全部无需 root**：① 全局 `decoration:blur`（`~/.config/hypr/looknfeel.lua`）② 每个 shell 层的 `layer_rule`（`~/.config/hypr/apps/omarchy-shell.lua`，按命名空间开 blur + 用 `ignore_alpha` 阈值只糊卡片）③ 表面自身的 alpha（用户级 `~/.config/omarchy/shell.toml` 的 `background-alpha`）。被 `omarchy update` / `omarchy refresh hyprland` 覆盖则按此恢复。
 
-> **⚠️ 现状（2026-09-06 · 4.0.3 复核 2026-09-10）**：bar 的圆角 + blur 已移交 **Omablur 插件**统一管理（`charlieras262.omablur`，bar 右侧 chip 调节，持久化 `looknfeel.lua` 标记块）。菜单/通知/OSD 等其它层的 blur 仍靠下方层规则。**shell 全表面透明度依赖系统 Style.qml 的 `shellOpacity`** —— Omablur 通过它让 bar/弹窗/通知/菜单随 blur 变 0.62 半透明。
+> **现状（4.0.4 起）**：本机不使用 Omablur → `Style.shellOpacity`（blur 开时把 shell 统一压到 0.62）整体作废：没有任何 surface 读它，配套 4 行系统文件 patch 不再需要，也不再存在"升级后被静默还原"。各层半透明**只由 `shell.toml` 的 `background-alpha` 决定**（同步注意项见 §3.0）。
 >
-> **✅ shellOpacity 4 文件 patch 已执行（2026-09-10，方案 A 全套）**：此前 4.0.3 里系统文件无 `shellOpacity`（Omablur 靠 `typeof` 防御静默降级 → blur 只看得到窗口圆角、shell 自身不透明）。按 Omablur 上游 README 手动 patch 4 个系统文件（**先备份到临时目录**）：
-> 1. `/usr/share/omarchy/shell/Commons/Style.qml`：`property int gapsOut: 5` 后加一行 `property real shellOpacity: 1`
-> 2. `/usr/share/omarchy/shell/Ui/KeyboardPanel.qml`：卡片 `color: Color.popups.background` → `Qt.rgba(...r, g, b, 1)`；`opacity: root.open || root.popoutSwitching ? 1.0 : 0` → `(...) * Style.shellOpacity`
-> 3. `/usr/share/omarchy/shell/plugins/notifications/components/NotificationCard.qml`：`color: Color.notifications.background` → `Qt.rgba(...)` + 加 `opacity: Style.shellOpacity`
-> 4. `/usr/share/omarchy/shell/plugins/menu/Menu.qml`：`color: root.background` → `Qt.rgba(...)` + 加 `opacity: Style.shellOpacity`
+> **浮栏是唯一例外（必须本地补丁）**：`charlieras262.floating-bar/Bar.qml` 上游把背景 alpha 强制成 1、再乘 `Style.shellOpacity`；token 缺失时回落 1 → **bar 会变实心**。已改成 `color: root.background`（直接用主题 `[bar] background-alpha`）+ `opacity: 1`。补丁清单见 `omarchy-plugins.md` §8.1。
 >
-> **⚠️ 升级必复补**：`omarchy update` 覆盖这 4 个系统文件会**静默还原**——blur 时 shell 不再变透明（浮栏/弹窗/通知/菜单恢复实心）。若 blur chip 拖动只有窗口圆角变化、shell 不透明，就重打上面 4 行。**4.0.3 起 Omablur 上游已移除自动 patch 脚本**（`bf8b25d` security 提交，防 root 自动写 git 管理目录），改由用户手动，无捷径。
+> **历史（已废弃，仅存档）**：`shellOpacity` 4 文件 root patch（`Style.qml` / `KeyboardPanel.qml` / `NotificationCard.qml` / `Menu.qml`）与"升级必复补"流程全文 → `archive/omablur-shellopacity-patch.md`。**上游为何不修**：作者 2026-08-28 删掉自动 patch 脚本（`bf8b25d`，理由 = 用 root 写一份用户可写的 git 检出，等于提权通道），仓库 0 issue；omarchy 上游（仓库已改名 `omacom/omarchy`，默认分支 `quattro`）至今没有这个 token。
 
 **① 落点：`~/.config/hypr/apps/omarchy-shell.lua`**（由 `hyprland.lua` `require` 加载，**不是 hyprland.lua 本体**——实测 `layer_rule` 只出现在该文件）。追加：
 ```lua
@@ -169,9 +314,9 @@ hl.layer_rule({ match = { namespace = "omarchy-lock-preview" }, blur = true })
 o.window("org.gnome.Nautilus", { opacity = "0.88 0.82" })
 o.window("org.gnome.Loupe", { opacity = "0.88 0.82" })
 ```
-**② `looknfeel.lua` decoration.blur**：基础块写 `{ size=8, passes=5, xray=false, ... }`，但**文件末尾的 Omablur 标记块会覆盖它**（`-- BEGIN charlieras262.omablur`，写 `size=11, passes=2, new_optimizations=true, ignore_opacity=true`）。**运行时生效值 = 11 / 2**（`hyprctl getoption decoration:blur:size` 实测）。改完要么动 Omablur 的 chip，要么改那个标记块——改上面基础块没用。
-> **⚠️ xray 已全局关闭（2026-09-10）**：`xray = true` → `false`。原因：xray 开启时模糊只取壁纸、忽略背后窗口，Spotlight 命令面板关闭淡出（Hyprland `layersOut` fade）时会露出"只糊壁纸"的 X 光残影。关掉后所有层/窗口的模糊都取背后真实内容（含窗口），更接近真玻璃。性能代价（xray 省的是浮动模糊开销）在 6950 XT 上可忽略。Omablur 滑块只写 `rounding/size/passes/new_optimizations/ignore_opacity`，**不写 xray**，不会被拖回去。回退：`looknfeel.lua.bak.<时间戳>`。
-**③ `shell.toml`**：`[bar] background-alpha 0.5`·`[popups] 0.58`·`[menu] 0.6+scrim 0.4`·`[launcher] 0.6+scrim 0.4`·`[notifications] **0.6**`·`[tooltip] 0.8`。（通知实测 0.6，非 0.8）
+**② `looknfeel.lua` decoration.blur**：**现在只有一个基础块**（原 Omablur 标记块 2026-09-16 已删、值折了进来）：`rounding=20`、`size=11`、`passes=2`、`xray=false`、`new_optimizations=true`、`ignore_opacity=true`、`vibrancy=0.5`、`brightness=1.05`、`contrast=0.95`、`input_methods=true`。**运行时生效值 = 11 / 2**（`hyprctl getoption decoration:blur:size` 实测）。调参直接改这个块 + `hyprctl reload`。
+> **⚠️ xray 已全局关闭（2026-09-10）**：`xray = true` → `false`。原因：xray 开启时模糊只取壁纸、忽略背后窗口，Spotlight 命令面板关闭淡出（Hyprland `layersOut` fade）时会露出"只糊壁纸"的 X 光残影。关掉后所有层/窗口的模糊都取背后真实内容（含窗口），更接近真玻璃。性能代价（xray 省的是浮动模糊开销）在 6950 XT 上可忽略。**Omablur 已卸载（2026-09-16），现在没有任何东西会回写这个值**。回退：`looknfeel.lua.bak.<时间戳>`。
+**③ `shell.toml`**：`[bar] background-alpha 0.5`·`[popups] 0.58`·`[launcher] 0.6+scrim 0.4`·`[notifications] **0.6**`·`[tooltip] 0.8`·**`[menu] 0.65`**（卡片色走用户模板取 `lighter_background`、scrim 0；2026-09-16 由 0.9 降到 0.65 与同族对齐，见 §3.4）。
 **④ OSD**：`jianlongliu.osd`（§2.2 卡片小 surface，blur 只盖卡片，不需 ignore_alpha）。
 
 **⑤ 新增 shell 层规则（2026-09-10）**：Spotlight 命令面板（`io.github.maajix.spotlight`，overlay，命名空间 `omarchy-spotlight`）。实际写在 `~/.config/hypr/apps/omarchy-shell.lua`（由 `hyprland.lua` `require` 加载）：
@@ -180,6 +325,20 @@ hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore
 ```
 > 卡片 `glassBackground` alpha≈0.62、scrim≈0.25，取 `ignore_alpha=0.4` 让 scrim 不糊、只糊卡片。是否加 `xray`/`no_anim` 视视觉而定；目前靠全局 `xray=false` 消除关闭残影。
 
+**⑥ Arc Dock 设置面板（2026-09-16）**：dock 插件（`io.github.claudsondouglas.arcdock`）**自己向 Hyprland 注册 dock 本体的 blur**（运行时 `eval hl.layer_rule(...)`，命名空间写成 `^(arc-dock)$`——带锚点是**故意避开**同插件的设置面板 `arc-dock-settings`，作者的理由是"文字卡片不该糊"）。结果：设置面板是半透明却没磨砂，背后终端/窗口文字透上来看不清。补一条静态规则即可：
+```lua
+hl.layer_rule({ match = { namespace = "^arc-dock-settings$" }, blur = true, ignore_alpha = 0.3 })
+```
+> 面板形状 = 全屏透明 surface + 一张居中卡片（卡片色 `Color.popups.background`，alpha = `shell.toml` `[popups] background-alpha` 0.58）→ `ignore_alpha` 取 **0.3**（低于卡片 alpha、高于透明区，同 §3.2 的算法）。**dock 本体不要再加规则**（插件自己管，加了会打架）。验证：`omarchy-shell shell toggle io.github.claudsondouglas.arcdock '{}'` 打开面板截图对比。
+
+**⑦ Arc Dock 右键菜单（2026-09-16）**：右键菜单是 dock 本体那层 surface（`arc-dock`）的 **XDG popup**，而插件自注册的规则**故意不带 `blur_popups`**（`Arcdock.qml:514` 注释：菜单"按设计不透明"，糊了也看不见）。但菜单卡片读 `Color.popups.background` —— 即 `shell.toml` `[popups] background-alpha` 0.58 → 实际半透明、**无磨砂**。补一条**只写 `blur_popups`** 的静态规则：
+```lua
+hl.layer_rule({ match = { namespace = "^arc-dock$" }, blur_popups = true })
+```
+> **同命名空间两条规则是按属性合并的**（未设字段不覆盖）：库存 `omarchy-shell.lua` 有一条 `omarchy-bar` 的 `no_anim` 规则，与用户那条 `blur/blur_popups/ignore_alpha` 长期共存且都生效。
+> **所以这里只写 `blur_popups`**——`blur` / `ignore_alpha` 由插件运行时代管（`Arcdock.qml:504`：`glassIgnoreAlpha = 10/100/2 = 0.05`），在这里再写会顶掉插件"玻璃"开关与不透明度滑块的联动。
+> 菜单卡片 alpha 0.58 > 0.05 → 磨砂生效。验证：右键 dock 开菜单截图（卡片区应有磨砂）；`hyprctl configerrors` 须空。
+
 **原理**：
 - Hyprland 对 layer 表面**默认不模糊**，须每层显式 `blur=true`（全局 decoration.blur.enabled 对 layer 无效）。
 - XDG 窗口走全局 blur 自动对透明区模糊；但 Omarchy 给所有窗口打 `default-opacity` 标签(0.985)→看不出 blur，给 nautilus/loupe 单独降 opacity(0.88 0.82) 即透出（注册在 default/hypr/windows.lua 之后故覆盖）。
@@ -187,14 +346,14 @@ hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore
 - `ignore_alpha` 取值：透明底+卡片 0.5（卡片须>0.5）；scrim+卡片取两者间（polkit scrim0.5/卡1.0→0.75）。
 - `omarchy-network-qr` 故意不加 blur；`omarchy-lock-preview` 保留全屏 blur；`omarchy-background` 壁纸层不碰。
 - **⚠️ ignore_alpha 在 OSD 已失效(2026-08-19)**：对策=卡片小 surface（§2.2）；菜单/通知复现"全屏糊/完全不糊"先疑同因；notifications 现靠 0.5 正常先不动。
-- **shell 自身（bar/弹窗/通知/菜单）的透明度**：由 `Style.shellOpacity` 统一控制（Omablur blur 开=0.62、关=1）。该 token 需手动注入系统 4 文件（见上现状注）；不注入则靠 Omablur `typeof` 防御静默降级——blur 只作用于窗口圆角，shell 表面保持不透明，**功能不崩但 blur 视觉缺失**。
+- **shell 自身（bar/弹窗/通知/菜单）的透明度**：**已无统一 token**（`Style.shellOpacity` 随 Omablur 一起废弃，2026-09-16）——各层按自己在 `shell.toml` 的 `background-alpha` 走：bar 0.5、popups 0.58、notifications 0.6、menu 0.9（刻意更实，见 §3.4）。想统一就把这几个值调齐；不再需要任何系统文件 patch。
 
 **各层 alpha 备忘**：
 | layer | 结构 | 卡片 alpha | scrim | ignore_alpha |
 |---|---|---|---|---|
 | bar | 条 | 0.5 | 无 | 无(整条糊) |
-| menu/image-selector/emojis/clipboard/keyboard-panel | 全屏+卡 | 0.6 | 0.4 | 0.5 |
-| notifications | 全屏+卡 | 0.8 | 无 | 0.5 |
+| menu/image-selector/emojis/clipboard/keyboard-panel | 全屏+卡 | 0.6→**menu 已改 0.65**（2026-09-16，原 0.9） | 0.4→**menu 已改 0** | 0.5 |
+| notifications | 全屏+卡 | **0.6**（用户层，实测 0.6） | 无 | 0.5 |
 | osd | **卡片小 surface** | 0.65 | 无 | 不需要 |
 | polkit | 全屏+卡 | 1.0 | 0.5 | 0.75 |
 | reminders | 全屏+卡 | 0.6 | 0.4 | 0.5 |
@@ -202,15 +361,127 @@ hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore
 | workspace-overview | 全屏+半透明底 | 0.82 | 无 | 0.5 |
 | lock-preview | 全屏锁屏 | 不透明 | — | 无 |
 
-**约束公式**：`卡片 alpha > ignore_alpha > scrim alpha`（menu 0.6>0.5>0.4；polkit 1.0>0.75>0.5）。卡片降到 ≤ ignore_alpha → 失磨砂，需同步调低 hyprland.lua。
+> **菜单 alpha = 0.65**（与 bar 0.5 / popups 0.58 / notifications 0.6 / launcher 0.6 同档；原 0.9 的起因见 §3.4）。**仍 > 菜单层 `ignore_alpha` 0.5，磨砂不受影响**；`[menu]` 是共享段 → clipboard / emojis / reminders 卡片一起变。
 
-**调参**：壁纸更明显降 `background-alpha`；更顺滑 `passes` 6~8；更鲜艳 vibrancy 0.5~0.7；更亮 brightness。
+> **实测（换帧回归法）**：Display 面板 **0.584**（= 配置 0.58）；菜单在 alpha 还是 0.9 时量到 ≈0.95。⚠️ 该法只在**背景静态**时可信——背后有视频/动画（bilibili 那类）时比差会被动态内容污染，数值直接失真（实测出现过 slope 为负的垃圾值），此时只信配置值或改用 A/B 法。
+
+**约束公式**：`卡片 alpha > ignore_alpha > scrim alpha`（polkit 1.0>0.75>0.5）。`scrim alpha` **可为 0**（=不压暗整屏，见 §3.4）；卡片降到 ≤ ignore_alpha → 失磨砂，需同步调低 hyprland.lua。
+
+**调参**：壁纸更明显降 `background-alpha`；更顺滑 `passes` 6~8；更鲜艳 vibrancy 0.5~0.7。**别调 `brightness`**——实测 0.6→2.0 无感（§3.4）。
 
 **被覆盖信号**：磨砂消失/bar 实心→layer_rule 丢；nautilus 实心→o.window opacity 丢；菜单全屏糊→rule 丢 ignore_alpha；OSD 无磨砂/全屏糊→jianlongliu.osd 丢；bar 不透→shell.toml 丢。
 
 **恢复步骤**：查 3 文件在否 → 旧内容在 `~/.config/hypr/*.lua.bak.*`、`shell.toml.bak.*` → 重写并验证 → 默认 hypr 配置 `/usr/share/omarchy/` 只读只能写 `~/.config/` → OSD 缺失就 clone 再改。
 
+**透明度实测法（2026-09-16 新增，别靠肉眼）**：
+- **A/B 法（判"某表面到底吃不吃主题 alpha"）**：把该段 `background-alpha` 临时改成 0.15 → `omarchy restart shell` → `grim` 截图看壁纸是否明显透上来 → **务必还原并再重启**。本机浮栏就是这样验证的（改前实心，改后透）。
+- **换帧回归法（量出有效 alpha）**：同一区域截"开/关"两帧灰度图（如面板开 vs 关），由 `pixel_open = α·C + (1-α)·pixel_closed`（C=卡片色，该区域内为常数）→ 取 (closed, open) 像素对的**斜率中位数**，`α = 1 - slope`。用 `magick -colorspace Gray -depth 8` 导 PGM，纯 Python 统计即可（本机没装 PIL）。实测样本：Display 面板 0.584、菜单（0.9 时代）0.95。
+- **⚠️ 两个失效条件**：① 背后有**动态内容**（视频、动画）→ 两帧本身就在变，比差被污染（实测出现过 slope 为负）；② 背后**繁杂**时 blur 会破坏 open/closed 的像素级相关性 → slope 系统性偏小、α 偏大。**先确认背景静态**，否则只信配置值或改用 A/B 法。
+- **解析法（最省事、可作上界判断）**：`卡片实际 = α·卡片色 + (1-α)·背景`，直接代入最亮/最暗背景算文字对比度（§3.4 那张表就是这么来的），不依赖截图。
+
 **验证**：`hyprctl reload && hyprctl configerrors`（须空）；肉眼（bar 磨砂、菜单只卡片糊、`notify-send` 只右上卡糊）；（可选）`grim`+`magick ... -edge 1` 比角落边缘能量（修好≈1.0、全屏糊骤降≈0）。
+
+### 3.4 菜单面板发黑 / 卡片色不跟主题（卡片色 + 全屏 scrim）
+
+> 最后核对：2026-09-11 · Omarchy 4.0.3
+
+**现象**（两个症状，同一个落点）：
+
+| 症状 | 什么时候发现 |
+|---|---|
+| 菜单一打开，卡片和遮罩糊成一片暗色，看不出「卡片浮在遮罩上」的层次 | 初始问题 |
+| **换壁纸/换主题后菜单卡片还是那身冷灰蓝，不跟主题走** | 后续发现（用户 2026-09-11 问起） |
+
+**根因**（两条叠加，**跟 blur 参数无关**）：
+
+| 因素 | 实际值 | 后果 |
+|---|---|---|
+| 卡片底色 | 未指定 → 回落主题 `background`（Tonal Spot `#101417`，近黑） | 卡片本身就黑 |
+| 卡片不透明度 | `background-alpha` × `Style.shellOpacity` = 0.6 × 0.62（当年 Omablur 提供该 token） | 最终仅 **0.37**，背后内容透上来。**2026-09-16 Omablur 卸载后只剩 `background-alpha`**，不再有乘子 |
+| 全屏 scrim | `scrim-alpha` 0.4 | 再压一层暗 → 卡片(37) 比 scrim(41) 还暗 |
+| （后续修的）卡片色写死 | `~/.config/omarchy/shell.toml` 里写死 `#333940`，**用户层键盖过主题生成值** | 亮是够亮了，但主题换了它不动 |
+
+**修复**（分两层，别混）：
+
+**① 卡片色——走用户级模板，随壁纸自动变**（2026-09-11 改）
+
+`~/.config/omarchy/themed/shell.toml.tpl`（= 上游 `/usr/share/omarchy/default/themed/shell.toml.tpl` 的副本，只改一行）：
+
+```toml
+[menu]
+background = "{{ lighter_background }}"   # 原为 {{ background }}
+```
+
+- 模板渲染器 `omarchy-theme-set-templates` 的加载顺序是**用户模板先、内建模板后**（`<user>/*.tpl <builtin>/*.tpl`），且已存在的输出文件不覆盖 → 同名 `shell.toml.tpl` 用户版完全接管。
+- `lighter_background` 是 matugen 生成的 `surface_container_high`（当前壁纸下 `#322826`），比 `background` 亮两档，正是要的层次。
+- 好处：**换壁纸/换主题自动跟随**，不必再让 `materal-update` 去反写配置文件。
+- ⚠️ 代价：这份 tpl 是**整份副本**，上游 `omarchy update` 改了 `shell.toml.tpl` 后要手动 diff 合并（文件头已注明）。
+- 备选（未采用）：主题目录放 `shell.<section>.toml` 做分区覆盖——**不支持 `{{ }}` 变量**（那段是 awk 原样拼接，不过 sed），只能写死 hex，等于没解决。
+
+**② alpha / scrim——仍留在用户 `~/.config/omarchy/shell.toml`**
+
+```toml
+[menu]
+background-alpha = 0.65     # 2026-09-16：0.9 → 0.65，与同族对齐（bar 0.5/popups 0.58/notifications 0.6/launcher 0.6）；仍 > ignore_alpha 0.5
+scrim-alpha = 0             # 不再压暗整屏
+```
+（这两行热重载吃不满，改完 `omarchy restart shell`。）
+
+**效果**（`grim` 截图量卡片区平均亮度，非肉眼。**这组数是第 ① 步之前、用旧色 `#333940` 测的**，用来证明「越改越亮」的趋势；换成 `lighter_background` 后绝对值会随壁纸变，别拿旧数对号）：
+
+| 阶段 | 卡片 | 背后 scrim |
+|---|---|---|
+| 原始 | 37.5 | 41.8（卡比遮罩更暗） |
+| 改 `shell.toml` 后 | 46.1 | 34.4 |
+| `restart shell` 后 | 53.0 | 35.3 |
+| （当时）提到 alpha 0.9 + 去 scrim | **~64**（文字对比 4.8:1） | — |
+
+**要点 / 坑**：
+
+- `shell.toml` 热重载**不完整**，改完必须 `omarchy restart shell` 才吃满（实测差一档亮度）。
+- `scrim-alpha = 0` **不影响「点空白处关闭」**：scrim 是 `Menu.qml:1045` 一个独立 `Rectangle`，关闭用的 `MouseArea` 在下一层（`Menu.qml:1050`），两者无关。
+- **`[menu]` 是共享段**：clipboard / emojis / reminders 三个面板都读 `Color.menu.*`（含 `scrim`），改这段会连带它们一起变。
+- ~~**Omablur 没有「blur 亮度」这一项**~~（仅存档：该插件已不在本机使用）：其 `decorationConfig()` 只写 `rounding / enabled / size / passes / new_optimizations / ignore_opacity`；面板滑块只有**圆角 + 强度**两个。`brightness / contrast / vibrancy` 归 `looknfeel.lua` 基础块管。
+- **`decoration:blur:brightness` 是死旋钮**：实测 0.6 → 2.0，卡片亮度只动 ≤3%，别拿它诊断「偏暗」。
+- **`hyprctl keyword decoration:blur:*` 现在只是临时值**：Omablur 卸载后没人再监听/写回（当年它会自动写回 `looknfeel.lua` 标记块，实测把 `rounding 20 / size 11 / passes 2` 改成 `14 / 14 / 3`）。要持久就改 `looknfeel.lua` 基础块 + `hyprctl reload`，别再靠 keyword。
+
+**遗留**（2026-09-11 已解决）：卡片色不再写死，改由用户模板取 `lighter_background` → 换壁纸/换主题自动跟随，不需要往 `materal-update` 里加同步步骤。
+
+**验证**（2026-09-11 实测）：`omarchy theme refresh` 后 `~/.local/state/omarchy/current/theme/shell.toml` 的 `[menu] background` = `#322826`（= 当时 `colors.toml` 的 `lighter_background`）；菜单开着截图，卡片内边距条取色 `srgb(23.6%,20.8%,22.0%)` → **R > B**（暖调）。对照：若仍是旧的 `#333940`，同条件合成应为 B > R（冷灰蓝）。scrim 未出现（角落像素与关菜单时逐位相同），说明用户层 `scrim-alpha = 0` 照常生效。
+
+**0.65 的文字对比度（2026-09-16 算的，不靠肉眼）**：卡片色 `#272a2f`（灰度≈42）+ 文字主题 foreground（≈226），按 `卡片实际 = α·卡片色 + (1-α)·背景` 推：
+
+| 背后背景 | 卡片有效灰度 | 文字对比 |
+|---|---|---|
+| 纯黑壁纸 | 25 | 13.4:1 |
+| 中灰 | 70 | 7.1:1 |
+| **纯白壁纸** | **115** | **3.6:1**（低于 WCAG AA 4.5:1） |
+
+实拍（菜单压在 bilibili 亮缩略图上）文字仍可读，但卡片被背景"洗白"的地方观感偏软。想更稳就回调 **0.7（纯白 4.3:1）/ 0.75（5.0:1）**——改完 `omarchy restart shell`。
+
+**回退**：删 `~/.config/omarchy/themed/shell.toml.tpl` + 在 `~/.config/omarchy/shell.toml` 的 `[menu]` 补回 `background = "#333940"` + `omarchy theme refresh` + `omarchy restart shell`。（`shell.toml.bak.*` 亦可用。）
+
+### 3.5 浮动 TUI 窗口尺寸（btop / yazi）—— 1280×800
+
+> 最后核对：2026-09-11 · Omarchy 4.0.3
+
+**问题**：`CTRL+SHIFT+ESCAPE`(btop) 和 `SUPER+Y`(yazi) 的浮动窗沿用了 `floating-window` 标签的出厂 **875×600**，在 3840×2160@1.6（逻辑 2400×1350）上太小——btop 挤掉指标列、yazi 预览栏被压扁。
+
+**做法**：只给这两个 app-id 打补丁，**不动共用标签**（1password / Bitwarden / portal 文件选择框、拖拽对话框都靠 `floating-window` 拿小尺寸，改标签会连带放大）。落点 `~/.config/hypr/windows.lua`：
+
+```lua
+o.window("^(org\\.omarchy\\.btop|org\\.omarchy\\.yazi)$", {
+  tag = "-floating-window",
+  float = true, center = true,
+  size = { 1280, 800 },
+})
+```
+
+**⚠️ 关键是 `tag = "-floating-window"`，不是 `size`**：标签那套 `float/center/size` 是**动态规则**，Hyprland 每个窗口**先静态、后动态**，与文件先后无关 → 后写的静态 `size` 一定被 875×600 盖掉（实测只加 `size` 完全无效）。必须先脱标签再重述属性。
+
+**生效条件**：窗口属性创建时求值，`hyprctl reload` 不改已开窗口，**重开一次才生效**；验证要先杀干净旧窗口（该 TUI 助手是「已开则聚焦」，否则永远读到旧尺寸）。
+
+> 完整上下文（快捷键、TUI 助手行为、验证脚本）见 `omarchy-function-tweaks.md` §3.5。
 
 ---
 
@@ -247,9 +518,9 @@ hl.layer_rule({ match = { namespace = "omarchy-spotlight" }, blur = true, ignore
 ```bash
 omarchy restart shell
 # 面板真的画出来了？开关各截一张图做差
-grim -o "$MON" /tmp/closed.png   # MON=你的显示器名，见 hyprctl monitors
+grim -o DP-2 /tmp/closed.png
 omarchy-shell shell toggle omarchy.menu '{"menu":"root"}'; sleep 2
-grim -o "$MON" /tmp/opened.png
+grim -o DP-2 /tmp/opened.png
 omarchy-shell shell toggle omarchy.menu '{"menu":"root"}'      # 关掉
 magick compare -metric AE /tmp/closed.png /tmp/opened.png null:  # 差异应为百万像素级
 ```
@@ -407,9 +678,8 @@ Rectangle { anchors.fill: parent; color: "#1e1e2e"; opacity: 0.45 }  // 遮罩�
      borderSpec: root.transparent
        ? Border.none()
        : Border.withWidth(Border.hyprlandActiveSpec(root.background, 2), root.barBorderWidth)
-     color: root.transparent ? "transparent"
-       : Qt.rgba(root.background.r, root.background.g, root.background.b, 1)
-     opacity: root.transparent ? 1 : (typeof Style.shellOpacity === "number" ? Style.shellOpacity : 1)
+     color: root.transparent ? "transparent" : root.background   // 主题 [bar] background-alpha（0.5）
+     opacity: 1                                                   // 上游原本是 Style.shellOpacity，已废弃
      Behavior on radius { ... } /* 原有三句 Behavior 保留 */
    }
    ```
@@ -426,6 +696,7 @@ Rectangle { anchors.fill: parent; color: "#1e1e2e"; opacity: 0.45 }  // 遮罩�
    `refreshGapsOut()` 内同时启 `borderWidthProbe`，`onRawEvent==configreloaded` 已由原 gapsOut 触发，无需新钩子。
 
 **验证**：`hyprctl -j getoption general:border_size`（.int 即环宽）。裁顶栏放大看圆角外沿三色渐变，内部仍是 bar 背景色。
+> **本机现状（2026-09-11）**：环宽 = **4**（`border_size` 由 5 收窄，三处同改见 §7.4）。上面代码块里的 `autoDetectedBorderWidth: 5` 只是 probe 出结果**之前**的兜底初值，不是生效值。
 **回退**：`Bar.qml.bak.*` 覆盖 + `omarchy restart shell`。
 **复发提醒**：`omarchy update` 或重置可能还原插件 → 用 `Bar.qml.bak.*` 重放；颜色随壁纸变是正常（同源 matugen），觉得跳脱就调 colors.toml 的 `hyprland_active_border`，别在 bar 里写死色。
 
@@ -437,8 +708,8 @@ hyprland_active_border = "rgba(ffb4a8ff)"   # 只留单色、去掉 45deg 与其
 > 更彻底想单色全退：删掉 `materal-update` 里拼 active_border 那几行 + 从 colors.toml 删 `hyprland_active_border`（回 §7.1 之前单色 accent）。备份 `materal-update.bak.*`。
 
 ### 7.3 弹层(popup/menu)边框宽度也统一到窗口 border_size
-**目标**：bar 上点开的插件浮层(时钟日历、托盘、媒体、菜单面板等)的边框，跟窗口和 bar **同一套**——颜色同源渐变(早已是)、宽度对齐 `border_size=5`。
-**背景**：浮层颜色**早就同源**(全部引 `hyprland.active-border` 主题渐变)，唯独**宽度**没对齐——各容器自己 fallback 成 `Style.space(2)`≈2，肉眼比窗口/bar 的 5 细一圈。§7.2 那条"镜映窗口同源参数"的漏网区。
+**目标**：bar 上点开的插件浮层(时钟日历、托盘、媒体、菜单面板等)的边框，跟窗口和 bar **同一套**——颜色同源渐变(早已是)、宽度对齐 `border_size`（**当前 = 4**）。
+**背景**：浮层颜色**早就同源**(全部引 `hyprland.active-border` 主题渐变)，唯独**宽度**没对齐——各容器自己 fallback 成 `Style.space(2)`≈2，肉眼比窗口/bar 细一圈。§7.2 那条"镜映窗口同源参数"的漏网区。
 
 **根因**：浮层边框由统一容器画——
 - `PopupCard`(`Ui/PopupCard.qml`)系(Tray/媒体/键盘等)走 `[popups]` section：`Border.localOrSurfaceSpec("popups","border",…, Math.max(1,Style.space(2)))`，**fallback 宽约 2px**。
@@ -448,10 +719,10 @@ hyprland_active_border = "rgba(ffb4a8ff)"   # 只留单色、去掉 45deg 与其
 **修复（零改源码，用户级 shell.toml，集中可逆）**：给 `~/.config/omarchy/shell.toml` 补 `border-width`，颜色/alpha 维持主题同源值：
 ```toml
 [popups]
-border-width = 5      # 对齐窗口 border_size
+border-width = 4      # 对齐窗口 border_size
 
 [menu]
-border-width = 5
+border-width = 4
 ```
 `Border.surfaceSpec` 读 `[popups] border-width`（存在则不 fallback）→ 弹层边框宽=窗口宽，颜色仍 `hyprland.active-border`。
 
@@ -460,16 +731,32 @@ border-width = 5
 **验证**：点开任一 bar 插件浮层，边框粗细应肉眼等同窗口/bar。
 **坑**：
 - 颜色`border`/alpha 是主题生成，**别**在用户 shell.toml 里覆盖它们，只补 `border-width`——避免破坏"随壁纸"。
-- **此值是静态 5**：改窗口 `border_size` 后浮栏会跟(§7.2 动态 probe)，但弹层这处 shell.toml 要手动同步。将来可仿 §7.2 做运行时对齐，暂不值当。
+- **此处是静态值**：改窗口 `border_size` 后浮栏会跟(§7.2 动态 probe)，但弹层这两处 shell.toml 要**手动同步**。将来可仿 §7.2 做运行时对齐，暂不值当。
+- **本机现状（2026-09-11）**：`border_size` 由 5 收窄到 **4**，三处一起改（见 §7.4）。
+
+### 7.4 边框收窄 5→4（2026-09-11）
+**诉求**：窗口/bar 的五彩环看着略粗，收一档。**必须三处一起改**，否则破坏 §7.2/§7.3 好不容易建立的一致性——只有一处改会让 bar 环、窗口、弹层各粗各的。
+
+| 改哪 | 位置 | 管什么 |
+|---|---|---|
+| `border_size = 4` | `~/.config/hypr/looknfeel.lua:19` | **真源**：窗口边框；浮栏环运行时 probe 它自动跟 |
+| `border-width = 4` | `~/.config/omarchy/shell.toml:9`（`[popups]`） | 弹层/OSD |
+| `border-width = 4` | `~/.config/omarchy/shell.toml:19`（`[menu]`） | 菜单面板 |
+
+- **生效**：`hyprctl reload`（窗口 + 浮栏环）**加** `omarchy restart shell`（shell.toml 两处）。浮栏环挂在 `configreloaded` 上，**`hyprctl reload` 后就已经跟上**（实测 reload 后环宽即 4）；图片侧"看着没变"是**测量阈值假象**，不是没生效，见下条。
+- **验证**：`hyprctl -j getoption general:border_size` 的 `.int` = 4；`hyprctl configerrors` 空；裁 bar 左上角数环宽物理px。⚠️ **阈值陷阱**：含抗锯齿会读成 8 物理px（看着像没变），**只数 `r≥170` 的核心像素**才得 6 物理px = 4 逻辑px（`scale=1.6`）；改前的核心像素是 8 = 5 逻辑px。
+- **回退**：`looknfeel.lua.bak.1789114438` / `shell.toml.bak.1789114438` 覆盖 + `hyprctl reload` + `omarchy restart shell`。
+- **持久性**：`~/.config/omarchy/shell.toml` 是**用户覆盖层**，`omarchy theme set` 只读**主题目录**那份 `shell.toml` 推给 shell、**不重写**用户这份 → 改动不会被换主题吃掉。
+- **坑**：这两处是**静态值**，`border_size` 再改时 shell.toml 得手动同步（§7.3 已注明）。
 
 ---
 
-## 八、全局字体链：SF Mono + 苹方 + Nerd 按字形分工
+## 八、【已失效·存档】全局字体链：SF Mono + 苹方 + Nerd 按字形分工
 
-> ⚠️ **现状（2026-09-11 实测）：这条链当前【未生效】**——`fc-match monospace` 落回 **JetBrainsMono Nerd Font**，不是 SF Mono Powerline。
-> 原因：`51-omarchy-body-fallback.conf` 里**只剩第一条**（拦 `monospace`），而**第二条（拦 `JetBrainsMono Nerd Font`）已于 2026-09-08 删除**。缺了第二条，第一条也拦不住（见 §8.5 机制）。
-> 即 bar 正文现在实际是 **JBM 主导 + 苹方兜中文**。想真正启用这条链要按 §8.3 补回第二条，但要先接受 §8.5 的字形代价。
-> 下面 8.1–8.4 是「链路成立时」的完整方案，保留备查。
+> 🔴 **本节已失效，仅存档备查（2026-09-11 复核）**：`51-omarchy-body-fallback.conf` 已删（只剩 `conf.d/51-omarchy-body-fallback.conf.bak.1788803869`），**SF Mono + 苹方那条链现在完全不存在**。
+> **现状**：`monospace` → `GoogleSansCode Material`（= GoogleSansCode Nerd Font 换过图标的版本，见 §1.3），中文由系统 fallback 兜。`fc-match -s monospace` 前三位 = `GoogleSansCode Material` → `JetBrainsMono Nerd Font` → `Noto Naskh Arabic`。
+> 即 bar 正文现在是 **GoogleSansCode 主导**。SF Mono 那条链不必再补——除非重新想要「西文 SF Mono 主导」的观感，那才按 §8.3 补回并重测框线。
+> 下面 8.1–8.5 保留原文，用于理解 fontconfig `assign` → 后置文件抢不回的机制（该机制本身仍成立）。
 
 **目标**：bar/正文默认等宽字体改成「西文 SF Mono → 中文 PingFang SC → 图标 JetBrainsMono Nerd Font」按字形自动分工链。用户已接受「SF Mono 等宽主导」观感（macOS 味）。
 
@@ -582,19 +869,188 @@ flea `Theme.qml` 直读 `~/.local/state/omarchy/current/theme/colors.toml`，与
 
 ---
 
+## 十、其它应用视觉对齐：GTK 应用（nautilus / loupe）
+
+**目标**：nautilus / loupe 的**配色跟随 omarchy 主题**（和 ghostty 同待遇），**接口字号**对齐系统 14px。
+**结论**：已落地。配色全程走 omarchy 原生扩展点（主题模板 + hook），没写野脚本。
+
+### 10.1 为什么之前不跟主题：omarchy 官方就没有 gtk 模板
+
+| 应用 | 是否跟主题 | 依据 |
+|---|---|---|
+| ghostty / foot / kitty / alacritty / btop / tmux / neovim / vscode / obsidian / helix …（**19 个**） | ✅ | 官方 `/usr/share/omarchy/default/themed/` 各有对应 `.tpl` |
+| **GTK / nautilus / loupe** | ❌ | **官方无 gtk 模板**（全盘搜 `*gtk*` 只有一个粘贴脚本） |
+
+omarchy 对 GTK 只做一件事：`omarchy-theme-set-gnome` 把 gsettings 的 `gtk-theme` 设成 **`Adwaita-dark`**——
+那是 GNOME 的固定主题名，跟 matugen 取的颜色**毫无关系**（实测其 CSS 里搜不到主题 accent）。
+
+本机原先靠手工补的两样上色，**都是静态的、不跟主题**：
+`~/.config/environment.d/gtk-theme.conf`（全局 `GTK_THEME=Catppuccin-Mocha-Mauve`）+ `~/.local/bin/nautilus`（wrapper 再套一层）。
+
+> **反直觉但重要**：**ghostty 才是"标准"待遇，GTK 才是异类**。本改动不是跟 omarchy 对着干，是把它漏掉的那块补上。
+
+### 10.2 ⚠️ 硬坑：`GTK_THEME` 会压死用户 CSS 的 `@define-color`
+
+| 写法 | GTK4 | GTK3 |
+|---|---|---|
+| `@define-color window_bg_color #xxx;`（**无** `GTK_THEME`） | ✅ 生效 | ❌ **不生效** |
+| 选择器 `headerbar { ... }` | ✅ 生效 | ✅ 生效 |
+| `@define-color`（**有** `GTK_THEME`） | ❌ **完全无效** | ❌ 无效 |
+| `!important` | ❌ **GTK CSS 不支持**（报 `Junk at end of value`） | ❌ 同样不支持 |
+
+**优先级**：`GTK_THEME` > 用户 CSS 的 `@define-color`；但**盖不过用户 CSS 的显式选择器**。
+
+> **GTK4 与 GTK3 正相反**：GTK4 首选 `@define-color`，GTK3 只能用选择器。别混用。
+> **排查铁律**：先 `env -u GTK_THEME` 再测，否则永远测不出效果。
+
+### 10.3 实施：配色 6 处
+
+| # | 位置 | 动作 | 说明 |
+|---|---|---|---|
+| 1 | `~/.config/environment.d/gtk-theme.conf` | **删除**（`.bak` 留） | 全局 `GTK_THEME`，压制 `@define-color` 的主犯 |
+| 2 | `~/.local/bin/nautilus` | **删除**（`.bak` 留） | 只重复套一层 `GTK_THEME`，删掉走系统 `/usr/bin/nautilus` |
+| 3 | `~/.config/hypr/bindings.lua` `SUPER+E` | **改指 `"nautilus"`** | ⚠️ **连带风险**：原绑定直指被删的 wrapper，不改会按键静默失效 |
+| 4 | `~/.config/omarchy/themed/gtk.css.tpl` | **新增** | GTK4 主题模板，`@define-color` 接 matugen 色（41 条） |
+| 5 | `~/.config/omarchy/themed/gtk3.css.tpl` | **新增** | GTK3 主题模板，**全走显式选择器**（`@define-color` 在 GTK3 无效），见 §10.6 |
+| 6 | `~/.config/omarchy/hooks/theme-set.d/gtk-colors-sync` | **新增**（可执行） | 主题渲染后同步两份：`gtk.css`→`~/.config/gtk-4.0/`、`gtk3.css`→`~/.config/gtk-3.0/` |
+
+> **改 wrapper 前必先搜引用**：`grep -rn "<被删路径>" ~/.config/`。绑定可能直指该路径，漏查会让按键静默失效。
+
+### 10.4 数据流（换壁纸 / 换主题都自动跟）
+
+```
+换主题或换壁纸 → matugen 取色 → colors.toml → omarchy-theme-set
+   → omarchy-theme-set-templates 渲染 *.tpl → current/theme/{gtk.css, gtk3.css}
+   → omarchy-hook theme-set → gtk-colors-sync → cp 到 ~/.config/gtk-4.0/gtk.css
+                                              → cp 到 ~/.config/gtk-3.0/gtk.css
+   → GTK4 监听该文件 → 已开窗口实时换色（无需重启应用）
+```
+
+**两处设计取舍**：
+
+| 决策 | 原因 |
+|---|---|
+| hook 用 **`cp` 而非软链** | GTK 靠文件监视器盯这两个路径；换主题时 omarchy 是 `rm -rf`+`mv` 换掉整个 theme 目录，**inode 会变**，软链会失效。写成真实文件才能触发监视器、已开窗口即时换色 |
+| hook 内 `sync_one` **目标文件缺失就 `return 0`** | 非 materal 主题（或模板被删）不会被清空成空白配置——宁可维持现状也不糊掉你的 GTK 外观 |
+| **层级对齐 Adwaita 惯例**（不是全用一个色） | `window`=`background`（底）、`view`=`dark_background`（内容区更暗）、`headerbar`/`sidebar`/`popover`/`card`=`lighter_background`（凸起更亮）。全用一个色会让窗口丢层次 |
+
+**模板变量语法**（`omarchy-theme-set-templates`）：`{{ key }}` 直插 · `{{ key_strip }}` 去 `#` · `{{ key_rgb }}` 转 `R,G,B` · `{{ mix A B 30% }}` 调和。
+用户模板 `~/.config/omarchy/themed/*.tpl` **优先于**官方同名；产物落 `current/theme/<模板名>`；**主题自带同名文件则跳过**。
+变量名出处：libadwaita 官方 CSS Variables 文档（下划线形态，本机 1.9.3 实测有效）。
+
+### 10.5 接口字体：对齐 14px（⚠️ `font-name` 的值是 **pt**，不是 px）
+
+`font-name` 里的数字是 **pt**，**不能当像素用**（曾误当 px，差 33%）。换算：
+
+```
+text-scaling-factor 1.1667 → gtk-xft-dpi = 114690/1024 = 112 dpi (= 96 × 1.1667)
+逻辑 px = pt × dpi / 72        反解：  pt = 目标px × 72 / dpi
+```
+
+| | 改前 | 改后 |
+|---|---|---|
+| `gsettings org.gnome.desktop.interface font-name` | `SF Pro 12`（= 18.7px） | **`SF Pro 9`（= 14.0px）** |
+
+与 bar 的 `shell.toml base-size=14` **精确对齐**（皆 14 逻辑 px = 22.4 物理 @scale1.6）。
+
+- **连带影响**（`font-name` 是**系统级接口字体**）：**Ghostty 右键菜单**、**Firefox / Zen 的 chrome**（标签栏/地址栏/菜单）**一起变小**。
+- **持久**：`omarchy-font-set` 只管**等宽字体族**（写 fontconfig + alacritty/kitty/ghostty/foot），**不碰 `font-name`** → 不会被覆盖。
+- **DPI 本身不用动**：Hyprland `scale=1.6` + `gtk-xft-dpi=112`，且**无** `GDK_SCALE`/`GDK_DPI_SCALE`（确认无双重缩放）。
+
+### 10.6 GTK3 应用：已处理（必须走显式选择器）
+
+**影响面**：`xdg-desktop-portal-gtk`（**文件选择器**）、`evince`、`gnome-disk-utility`、`sushi`、`xournalpp`、`linuxqq`、chromium/zen 部分外壳。
+
+**做法**：走同一条链路，但**另写一个模板**——因为 GTK3 里 `@define-color` 完全压不过主题（见 §10.2 对照表）：
+
+```
+~/.config/omarchy/themed/gtk3.css.tpl  →  渲染  →  current/theme/gtk3.css
+   →  hook gtk-colors-sync  →  cp  →  ~/.config/gtk-3.0/gtk.css
+```
+
+**GTK3 专属的 4 个坑**（模板里逐条对应）：
+
+| 坑 | 表现 | 解法 |
+|---|---|---|
+| 渐变盖不住 | Adwaita 大量用 `background-image` 画渐变 | `button` / `headerbar` / `entry` / `popover` / `notebook` 等**都要显式写 `background-image: none`**，只改 `background-color` 无效 |
+| 焦点环 / 下划线是 box-shadow | Adwaita 用 `box-shadow` 画输入框焦点环、选中标签下划线（**蓝色**） | 同形覆盖：`entry:focus` 用 `box-shadow: inset 0 0 0 1px`、`notebook tab:checked` 用 `box-shadow: inset 0 -4px`；只改 `border-color` 会留下蓝环 |
+| 硬编码蓝兜底 | `.gtkstyle-fallback:selected`、`.content-view .tile:selected`、树表列头 `treeview.view header button` 另有一套高优先级样式 | 单独补规则压掉（普通 `button` 规则**盖不住** `treeview.view header button` 这种组合选择器） |
+| 读取路径固定 | `~/.config/gtk-3.0/gtk.css` 是硬编码路径 | **`XDG_CONFIG_HOME` 隔离对它无效** → 试错只能直接改真机（配 `env -u GTK_THEME`），别指望隔离目录 |
+
+**验证（2026-09-15 实测基线，无 vision 也能全程做）**：
+
+| 检查 | 命令 / 判据 |
+|---|---|
+| 模板渲染干净 | `grep -c "{{" ~/.local/state/omarchy/current/theme/gtk3.css` → `0` |
+| hook 同步到位 | `cmp ~/.config/gtk-3.0/gtk.css ~/.local/state/omarchy/current/theme/gtk3.css` → 无输出 |
+| CSS 合法 | 起 GTK3 程序，stderr **不应**有 `Theme parsing error` |
+| 真上色了 | 起 GTK3 程序截图取样：`evince`（无参 = 最近文档）头部栏应为 `lighter_background`、内容区 `dark_background`。实测拿到 headerbar `(48,40,43)`=`#30282b`、内容区 `(20,13,16)`≈`#130c0f`（**差 1** 是合成取整，正常）、左上角 `(250,172,204)` ≈ accent `#feb0d2` |
+
+> ⚠️ **取样陷阱**：`grim -g "x,y WxH"` 吃的是**逻辑坐标**，吐出来的 PNG 却是**物理像素**（本机 `scale=1.6`：875×600 的窗口出 1400×960）。用 `magick -format "%[pixel:p{X,Y}]"` 取点前把坐标乘 1.6，否则量到的是别的区域（第一次就这么量错了）。
+> ⚠️ 取色前先确认该窗**没有 opacity 规则**（`~/.config/hypr/windows.lua`）：nautilus/loupe/zen 都有，取到的是叠壁纸后的混合值。
+
+**回退**（改 `environment.d` 那步需**重启**，见 §〇）：
+```
+cp ~/.config/environment.d/gtk-theme.conf.bak ~/.config/environment.d/gtk-theme.conf
+cp ~/.local/bin/nautilus.bak ~/.local/bin/nautilus && chmod +x ~/.local/bin/nautilus
+# bindings.lua 的 SUPER+E 改回 nautilus，然后 hyprctl reload
+rm ~/.config/omarchy/themed/gtk.css.tpl ~/.config/omarchy/themed/gtk3.css.tpl
+rm ~/.config/omarchy/hooks/theme-set.d/gtk-colors-sync
+rm ~/.config/gtk-4.0/gtk.css ~/.config/gtk-3.0/gtk.css
+gsettings set org.gnome.desktop.interface font-name "SF Pro 12"
+```
+
+### 10.7 复现 / 自检
+
+**① 链路自检**（输出两个相同颜色即正常，应始终一致）：
+```bash
+grep -m1 "^accent " ~/.local/state/omarchy/current/theme/colors.toml
+grep -m1 accent_bg_color ~/.config/gtk-4.0/gtk.css
+```
+不一致 → hook 没跑，手动触发：`omarchy theme set <主题名>`。
+
+**② 换壁纸跟随**：`omarchy theme bg next`，再跑 ① 看颜色是否变了。
+
+**③ 截图验色**（无 vision 也能验）：
+```bash
+hyprctl clients -j                     # 取目标窗口 at / size（**逻辑**坐标）
+grim -g "x,y WxH" out.png              # 输出却是**物理**像素（本机 scale 1.6 → 乘 1.6）
+magick out.png -crop <区域> +repage -colors 3 -format %c histogram:info: | sort -rn | head
+```
+拿主色对照 `colors.toml` 里的 `background` / `lighter_background`。
+⚠️ 窗口有 `opacity`，取色会略偏（正常）。坐标与取点的换算细则见 §10.6 的取样陷阱。
+
+**④ 试 CSS 的标准装置**（比直接改真机干净，且能绕开单实例）：
+自写最小 libadwaita 程序（`Adw.ApplicationWindow` + `HeaderBar`），用隔离配置目录启动：
+```bash
+XDG_CONFIG_HOME=/tmp/try env -u GTK_THEME python3 rig.py
+```
+**`env -u GTK_THEME` 不可省**——否则测不出任何 `@define-color` 效果（见 10.2）。
+
+**⑤ 测试对象取舍**：
+| 对象 | 说明 |
+|---|---|
+| nautilus | 可用，但**是单实例**——必须先确认量到的是**新进程**，否则量的是旧窗口 |
+| evince | ✅ **测 GTK3 的首选**（`ldd` 确认链 `libgtk-3.so.0`；无参启动=最近文档，头部栏/内容区齐全，实测已用来验 GTK3 配色） |
+| loupe | ❌ **打开图片会隐掉全部 chrome**，没有可量的界面 |
+| 最小 libadwaita 程序 | ✅ 首选，无实例污染、控件齐全 |
+
+---
+
 ## 总结
 
 | 章 | 要点 |
 |---|---|
-| 〇 公共前置 | 改内建插件**必须** `omarchy plugin clone` 成 `jianlongliu.<id>`，否则 update 还原；克隆后记得手动同步 `centerAnchor`。尺寸一律走 Style token，不写魔数 |
-| 一 字号 / 图标 | 全栏字号以 clock 的 `body`(14) 为准；bar 图标套官方 `BarIconButton` + `iconComponent`，别手写宽高 |
+| 〇 公共前置 | 改内建插件**必须** `omarchy plugin clone` 成 `jianlongliu.<id>`，否则 update 还原；克隆后记得手动同步 `centerAnchor`。尺寸一律走 Style token，不写魔数。**改 `environment.d` 要「重启」不是「注销」**（user manager 跨登录存活，注销清不掉） |
+| 一 字号 / 图标 | 全栏字号以 clock 的 `body`(14) 为准；bar 图标套官方 `BarIconButton` + `iconComponent`，别手写宽高。右侧状态图标是**字体字形**，`omarchy font set` 别选 `Mono` 变体（否则高矮不齐），改完 `omarchy restart shell`。换 Material 图标走**替身字体**（§1.3） |
 | 二 克隆实例 | keyboard-layout / system-update 是纯克隆；OSD 因 `ignore_alpha` 在全屏 surface 失效，改成卡片大小的 surface |
-| 三 视觉效果 | 工作区胶囊：撑满 bar 高才垂直居中、用前景 alpha 别用 accent。浮栏四角暗角靠 `ignore_alpha=0.1` 修；阴影无解已放弃。磨砂=每层配 `ignore_alpha`（卡片 > 阈值 > scrim） |
+| 三 视觉效果 | 工作区胶囊：撑满 bar 高才垂直居中、用前景 alpha 别用 accent。浮栏四角暗角靠 `ignore_alpha=0.1` 修；阴影无解已放弃。磨砂=每层配 `ignore_alpha`（卡片 > 阈值 > scrim，scrim 可为 0）。**菜单发黑是卡片色太黑 + scrim 压暗，不关 blur；卡片色别写死在用户 shell.toml，改用户模板取 `lighter_background` 才随主题**（§3.4）；btop/yazi 浮动窗 875×600 太挤 → 脱 `floating-window` 标签自定 1280×800（§3.5） |
 | 四 菜单 / 锁屏 | 头像要用**预裁好的圆形透明 PNG**（QML 里遮罩裁不圆）；锁屏走 lock-explorer 的 `lock-avatar.png` 探测路径 |
 | 五 光标 | AUR 装 Bibata；`envs.lua`（子进程）和 `autostart.lua`（Hyprland 自己画的 `setcursor`）**两处都要写** |
 | 六 SDDM | 复制官方主题改背景、指向 `current/background` 软链；greeter 以 sddm 用户跑，home 是 700 需 `setfacl` 放行 |
 | 七 动态主题 | matugen 从壁纸取 M3 色写 `colors.toml`，再 `theme refresh` 重渲；激活边框渐变靠 `hyprland_active_border` |
-| 八 字体链 | 系统已把 `monospace` assign 成 JBM，正解是 `conf.d/51-*.conf` 再 prepend（SF Mono Powerline → 苹方 → JBM） |
+| 八 字体链 | **已失效存档**：SF Mono + 苹方那条链的 conf 已删。现状 `monospace` → `GoogleSansCode Material`（见 §1.3）。机制部分（fontconfig `assign` 抢不回来）仍成立 |
 | 九 flea | 别改共享的 Style（会连带 bar）；`cp -rL` 一份副本到 `~/.local/share/flea`，用 `FLEA_UI` 指过去 |
+| 十 GTK 应用 | omarchy 官方**没有** gtk 模板（ghostty 等 19 个才有）→ GTK 默认只拿 `Adwaita-dark`，不跟主题。补法：**两份**主题模板（`gtk.css.tpl` 给 GTK4 用 `@define-color`；`gtk3.css.tpl` 给 GTK3 只能全用**显式选择器**）+ hook 同步到 `~/.config/gtk-4.0/` 与 `~/.config/gtk-3.0/`。**`GTK_THEME` 会压死 `@define-color`（必须先删）；`!important` 不存在；GTK3 还额外要用 `background-image: none` 和 `box-shadow` 同形覆盖才盖得住 Adwaita**。接口字体 `font-name` **是 pt 不是 px**：`SF Pro 9` = 14px，对齐 bar |
 
 **贯穿全篇的一条准则**：任何想跟窗口视觉一致的 surface 边框，都去**镜映窗口的同源参数**（颜色取 matugen 的 active-border、宽度取 Hyprland `border_size`），别自己写一套色和宽度。

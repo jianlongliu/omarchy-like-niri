@@ -2,6 +2,12 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-24 — 锁屏设计纳入 git、开机解密屏补丁入库、公开仓 docs 补齐
+
+- **`lock-designs/SplitJianlong.qml` 纳入 git**：此前只存在于磁盘（同目录 `Card.qml` 已跟踪），等于这个自定义锁屏没有备份。现跟踪。
+- **开机解密屏补丁入库**：`plymouth/custom/generate.sh` 的本地定制（`wait_line` / `panel_edge_x()` / accent 竖线）以 diff 形式存公开仓 `omarchy/patches/lock-explorer-generate.sh.patch` + `patches/README.md` 重打步骤。插件目录被 `.gitignore` 的 `plugins/*` 排除，故不进插件树（避免与插件自身 git 嵌套冲突）。
+- **公开仓 docs 全量补齐**：三篇自 09-11 发布后未再同步（visual-tweaks 差 546 行、plugins 194 行、nirification 154 行），本次 cp + 脱敏一次追平。
+
 ## 2026-09-22 — 开机解密屏：split 快照孪生 + 等待动画改「面板边界竖线」
 
 - **开机解密屏切到 split 的 snapshot 孪生**：`boot=follow` → 实际应用 `snapshot:my-splitjianlong`。split 没有手写 plymouth 孪生（只有 `terminal/storm/eyes/river` 四个），走 `plymouth/apply.sh` 的 `snapshot:` 路线——整屏截图当背景，密码圆点打进设计自己的输入框（几何由 explorer 量出：`88.33,55.78,13.83`）。本机 `/boot` 是 `0700 root`，`addon_capable()` 在 pkexec **之前以普通用户身份**跑 → 恒判 false → **每次应用都走重建路径**（两个 UKI，30–60s），不是 README 宣传的"写 ESP addon、不重建"。
