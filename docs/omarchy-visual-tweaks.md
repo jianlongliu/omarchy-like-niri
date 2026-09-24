@@ -1,6 +1,6 @@
 # Omarchy bar 视觉与克隆整合笔记
 
-> 最后核对：2026-09-24 · Omarchy 4.0.4 / Hyprland 0.56.2
+> 最后核对：2026-09-25 · Omarchy 4.0.4 / Hyprland 0.56.2
 > 整合（本地笔记存档）原分散的 bar 视觉笔记（字号/对齐、克隆插件、工作区胶囊/磨砂玻璃、字体链、flea 对齐、GTK 应用对齐），去重后重排。相关总文档：`omarchy-nirification.md`；插件清单见 `omarchy-plugins.md`。
 > 本机 bar：`charlieras262.floating-bar`（`Bar.qml`）；Hyprland 层规则在 `~/.config/hypr/apps/omarchy-shell.lua`；透明底在 `~/.config/omarchy/shell.toml`。
 
@@ -675,7 +675,7 @@ Rectangle { anchors.fill: parent; color: "#1e1e2e"; opacity: 0.45 }  // 遮罩�
      id: barBackground
      anchors.fill: parent
      radius: root.effectiveCornerRadius          // 圆角贴合
-     borderSpec: root.transparent
+     borderSpec: (root.transparent || !root.showBorderRing)   // showBorderRing ← shell.json bar.borderRing
        ? Border.none()
        : Border.withWidth(Border.hyprlandActiveSpec(root.background, 2), root.barBorderWidth)
      color: root.transparent ? "transparent" : root.background   // 主题 [bar] background-alpha（0.5）
@@ -697,8 +697,22 @@ Rectangle { anchors.fill: parent; color: "#1e1e2e"; opacity: 0.45 }  // 遮罩�
 
 **验证**：`hyprctl -j getoption general:border_size`（.int 即环宽）。裁顶栏放大看圆角外沿三色渐变，内部仍是 bar 背景色。
 > **本机现状（2026-09-11）**：环宽 = **4**（`border_size` 由 5 收窄，三处同改见 §7.4）。上面代码块里的 `autoDetectedBorderWidth: 5` 只是 probe 出结果**之前**的兜底初值，不是生效值。
-**回退**：`Bar.qml.bak.*` 覆盖 + `omarchy restart shell`。
-**复发提醒**：`omarchy update` 或重置可能还原插件 → 用 `Bar.qml.bak.*` 重放；颜色随壁纸变是正常（同源 matugen），觉得跳脱就调 colors.toml 的 `hyprland_active_border`，别在 bar 里写死色。
+**回退**：环可开关，见下节「单独关掉 bar 环」。
+**复发提醒**：颜色随壁纸变是正常（同源 matugen），觉得跳脱就调 colors.toml 的 `hyprland_active_border`，别在 bar 里写死色。
+
+**单独关掉 bar 环（不动窗口边框）**：菜单 **Style › Menu Bar › Border Ring** 一键切换，命令是 `omarchy-bar-ring [on|off|toggle|status|enabled]`。
+
+| 项 | 值 |
+|---|---|
+| 状态存哪 | `~/.config/omarchy/shell.json` → `bar.borderRing`（**缺省为开**，只有显式 `false` 才关） |
+| 谁写 | `~/.local/bin/omarchy-bar-ring`（source `omarchy-shell-config`，复用 omarchy 自己的 `commit`：jq + 原子写 + `reloadConfig`） |
+| 插件怎么读 | `Bar.qml` `applyBarConfig()` 里 `showBorderRing = config.borderRing !== false`，与 `transparent`/`floatGap`/`cornerRadius` 同一条路 |
+| 菜单行 | `extensions/omarchy-menu.jsonc` 的 `style.bar.ring`，`checked` = `omarchy-bar-ring enabled`（**环显示时打勾**） |
+
+- **只影响 bar**：窗口边框与弹层边框不变（它们仍吃 `hyprland_active_border`）。三者同源是 §7.2 的设计前提，关环等于**有意让 bar 与窗口解耦**。
+- **验证**（不靠目测）：`grim -g "0,0 60x70"` 取左上角，采样**环带像素** `p{20,33}`（`scale=1.6` 下 bar 左沿在物理 x≈19–26）——环开 = `#FEB0CE`，关 = `#625E71`（bar 自身背景色）。
+- **坑**：① `checked` 语义必须写成**正向**（环在=打勾），否则勾选态与直觉相反。② 判断"环是否开"**不能用 `jq '.bar.borderRing // true'`**——jq 的 `//` 把 `false` 当空值，会恒报 `true`；用 `.bar.borderRing == false | not`。③ QML 侧改完要 `omarchy restart shell` 才加载（热重载不总触发）。
+- **回退**：`omarchy-bar-ring on`，或从 `shell.json` 删掉 `bar.borderRing`。
 
 **切回单色备选（五彩用腻时）**：整套镜映同源，故 bar 环 + 弹层 + **窗口激活边框一起**回单色（一致性下无法只切 bar 不切窗口；想窗口单色=§7.1 全套回退）。只需把 `colors.toml` 的 `hyprland_active_border` 从多色改回**单个 accent**：
 ```toml

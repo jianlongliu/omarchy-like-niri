@@ -1,6 +1,8 @@
 {
   "bar": {
+    "borderRing": false,
     "centerAnchor": "omarchy.clock",
+    "id": "charlieras262.floating-bar",
     "layout": {
       "center": [
         {
@@ -18,9 +20,9 @@
           "size": 16
         },
         {
-          "id": "coding-sparrow.systempulse",
           "checkConnectivity": true,
           "compactBar": false,
+          "id": "coding-sparrow.systempulse",
           "notifications": true,
           "showCpu": true,
           "showGpu": false,
@@ -59,10 +61,10 @@
           "id": "omarchy.active-window"
         },
         {
-          "id": "meviusisback.ai-subs",
           "barDisplay": "Data",
+          "defaultSub": "commandcode",
           "hermesEnvFile": "~/.zshenv",
-          "defaultSub": "commandcode"
+          "id": "meviusisback.ai-subs"
         }
       ],
       "right": [
@@ -86,10 +88,10 @@
           "members": "srozen.ufw, omarchy.microphone, io.github.majesticio.clipboard-button, io.github.sahzudin.omarchy-screenshot-manager"
         },
         {
-          "id": "omarchy.tray",
           "hidden": [
             "Fcitx"
-          ]
+          ],
+          "id": "omarchy.tray"
         },
         {
           "id": "ronald.input-sources",
@@ -113,18 +115,26 @@
       ]
     },
     "position": "top",
-    "transparent": false,
-    "id": "charlieras262.floating-bar"
+    "transparent": false
   },
+  "cloneSourceRestores": [
+    "io.github.sirjul1337.lock-explorer",
+    "jianlongliu.osd"
+  ],
+  "disabledPlugins": [
+    "omarchy.lock",
+    "omarchy.nightlight",
+    "omarchy.osd"
+  ],
   "idle": {
     "lock": 1200,
     "screensaver": 86400
   },
   "plugins": [
     {
-      "id": "io.github.sirjul1337.lock-explorer",
+      "boot": "snapshot:my-splitjianlong",
       "design": "my-splitjianlong",
-      "boot": "snapshot:my-splitjianlong"
+      "id": "io.github.sirjul1337.lock-explorer"
     },
     {
       "id": "andreconde.quick-look"
@@ -148,14 +158,5 @@
       "id": "io.github.claudsondouglas.arcdock"
     }
   ],
-  "version": 1,
-  "disabledPlugins": [
-    "omarchy.lock",
-    "omarchy.nightlight",
-    "omarchy.osd"
-  ],
-  "cloneSourceRestores": [
-    "io.github.sirjul1337.lock-explorer",
-    "jianlongliu.osd"
-  ]
+  "version": 1
 }

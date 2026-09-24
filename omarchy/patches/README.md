@@ -2,7 +2,7 @@
 
 改**第三方插件源码**的补丁存档。插件目录（`~/.config/omarchy/plugins/*`）被仓库根 `.gitignore` 排除、且各自带独立 git 仓，所以补丁以 diff 形式单独存放，而非直接放插件文件。
 
-`omarchy update` 或对相应插件 `git pull` 后补丁**会被冲掉**，按下面步骤重打。补丁清单与作用说明见 [`docs/omarchy-plugins.md`](../../docs/omarchy-plugins.md) §8.1。
+**`omarchy update` 不会碰它们**（它只换 `/usr/share/omarchy`，不动 `~/.config/`）；会冲掉补丁的是 `omarchy plugin update` 或对该插件仓 `git pull` / `reset`，届时按下面步骤重打。补丁清单与作用说明见 [`docs/omarchy-plugins.md`](../../docs/omarchy-plugins.md) §8.1。
 
 ## `lock-explorer-generate.sh.patch`
 

@@ -30,4 +30,17 @@
 
   // Hide "Hibernate" — disk-sleep not used (systemd-hibernate.service is masked too).
   "system.hibernate": {"when": "false"},
+
+  // Floating bar: the 五彩琉璃 outline around the bar is mirrored from the
+  // focused window's active border (hyprland_active_border). Untick it when
+  // that gradient reads too busy. State lives in shell.json's bar.borderRing
+  // (written by ~/.local/bin/omarchy-bar-ring), the same place the bar's other
+  // appearance options live; `checked` marks the row when the ring is shown.
+  "style.bar.ring": {
+    "icon": "󰆠",
+    "label": "Border Ring",
+    "description": "Gradient outline around the bar",
+    "checked": "omarchy-bar-ring enabled",
+    "action": "omarchy-bar-ring toggle"
+  },
 }

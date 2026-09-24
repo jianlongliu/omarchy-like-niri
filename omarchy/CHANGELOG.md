@@ -2,6 +2,18 @@
 
 改动日志（倒序，最新在上）。提交代码时同步更新本节。
 
+## 2026-09-25 — bar 五彩琉璃环可开关（菜单 Style › Menu Bar › Border Ring）
+
+- **浮栏五彩环接入 + 可开关**：`charlieras262.floating-bar` 的 `barBackground` 换 `BorderSurface`、描一圈与聚焦窗口同源的 `hyprlandActiveSpec` 渐变，宽度运行时 probe `general:border_size`（细节 `omarchy-visual-tweaks.md` §7.2/§7.4）。新增开关，**只关 bar、不动窗口与弹层边框**。
+- **存储层次走对**：状态存 `shell.json` → `bar.borderRing`（**缺省为开**，只有显式 `false` 才关），与相邻的 `bar.transparent`/`floatGap`/`cornerRadius` 同一条路；写入者是 `~/.local/bin/omarchy-bar-ring`（source `omarchy-shell-config`，复用 omarchy 自己的 `commit` = jq + 原子写 + `reloadConfig`）。**未用 `toggles/` flag**——那是放功能开关（nightlight/screensaver/bar-off）的目录，放外观选项会与 `Transparency` 的既有做法不一致，且会继承 `omarchy-toggle-bar` 注释里承认的「watch 可能漏事件」竞态。
+- **菜单行**：`extensions/omarchy-menu.jsonc` 增 `style.bar.ring`，`checked` = `omarchy-bar-ring enabled`。图标 `U+F01A0`（Nerd `md-crop_landscape`，横圆角矩形；**不在** Material 替身字体的 140 条替换映射内）。
+- **验收**（不靠目测）：`grim -g "0,0 60x70"` 采样环带 `p{20,33}` —— 环开 `#FEB0CE` ↔ 关 `#625E71`（bar 自身背景色），切换实时生效；菜单勾选态开/关两向均截图确认。
+- **踩坑**：① `jq '.bar.borderRing // true'` **判错**——jq 的 `//` 把 `false` 当空值，环已关却恒报 `true`；改用 `.bar.borderRing == false | not`。② `checked` 必须写**正向**（环在=打勾），否则勾选态与直觉相反。③ 首版图标用了 `U+F0B1B`，那是 Nerd 的 `md-alpha_t_box`（**字面就是方框里一个 T**），选错码位而已、与 Material 替换无关。
+- **插件侧提交**：本机改动收进插件仓库**单个** `local:` 提交（`c4073d7`），领先 2 → **1**。原 `8a0c4dc`（给 `Style.shellOpacity` 加 `typeof` 防御）**已成死代码**——整行已被 `opacity: 1` 取代，代码里再无 `shellOpacity` 引用，故并入删除。合并手法见 `omarchy-plugins.md` §9.3.1。
+- **架构决策**：① **标准 bar `omarchy.bar` 不私有化**——它在 `/usr/share` 由 `omarchy update` 自动维护、本机零改动，且**浮动 bar 正是它的官方 fork**（`manifest.json` 的 `clonedFrom: omarchy.bar`），合并 omarchy 改动是插件作者的事不归本机；留着当参考基线。② **浮动 bar 走"提交制"**而非补丁文件制——上游极慢（累计 14 提交、最后 2026-08-27），为它搭补丁机制属过度工程。③ 升级到「真 fork」的信号：上游连续 6 个月无提交，或 `omarchy.bar` 出安全修复而 fork 迟迟不跟。
+- **文档同步**：`omarchy-visual-tweaks.md` §7.2 补「单独关掉 bar 环」小节 + 更新 `borderSpec` 代码块；`omarchy-plugins.md` §8.1 补丁表加行、§9.2 跟踪行更新、新增 **§9.3.1 提交制插件的 rebase 常规**（含体检法与合并提交的坑）、新增 **§9.4 本机定制的暴露面**（谁会覆盖什么）。
+- **澄清「上游」有两个**：`omarchy update` 的上游 = omarchy 本体（`/usr/share/omarchy`）；`omarchy plugin update` 的上游 = 各插件的作者仓库。**本机定制全部落在 `~/.config/omarchy/` 下，`omarchy update` 一律不碰**（`omarchy-update`/`update-system-pkgs` 里 `config/omarchy` 出现 0 次；106 个迁移脚本无一碰 extensions）→ **菜单 patch 不受 omarchy 更新影响**。唯一例外是 `omarchy reinstall`（`cp -af /etc/skel/. ~/`，不备份），但配置仓库已跟踪该文件、`git checkout` 可回。
+
 ## 2026-09-24 — 上游跟踪：lock-explorer 补丁 rebase + 两个第三方插件升级
 
 - **补丁 rebase 到 v1.8.1**：`lock-explorer` 上游 v1.8.1 **独立修了同一个问题**（旧 22px 圆弧在 4K 上「缩成一个小点」），解法是**把圆弧画成 96px 再按输入框高度缩放**。本机解法不同（沿面板边界画满高竖线），观感不同故不采纳。冲突只在「等待帧生成」与「帧定位」两处，解法 = **保留我们的 `wait_line` 分支，回退分支改用上游的 96px + `spinsize`**。补丁文件已更新（基准版本写进 `omarchy/patches/README.md`）。

@@ -1,6 +1,6 @@
 # Omarchy 本机插件参考
 
-> 最后核对：2026-09-24 · Omarchy 4.0.4 / Hyprland 0.56.2
+> 最后核对：2026-09-25 · Omarchy 4.0.4 / Hyprland 0.56.2
 > 作用：记录本机**主动安装/克隆且当前启用**的 Omarchy shell 插件清单、目录结构与常用管理命令。此文档按真实 `shell.json` + `omarchy plugin list` 同步。系统自带的 first-party `omarchy.*` 为只读内置，禁用/移除项均不在此文档。
 > 注意：niri 化的 scrolloverview 是 **Hyprland 原生插件**（`hyprpm` 管理），**不在此文档**（Omarchy shell 插件）范围内，详见 `omarchy-nirification.md`。
 
@@ -141,14 +141,17 @@ bar:               { position: top, transparent: false, id: charlieras262.floati
 
 ### 8.1 ⚠️ 本地补丁清单（update / 插件 pull 会覆盖，需重打）
 
-下表都是**改第三方插件源码**的本地补丁，不在上游；分**防御补丁**（上游 bug 的本地兜底）与**定制补丁**（有意改外观/行为）。`omarchy update` 或对相应插件 `git pull` 后**可能被冲掉**，届时按需重打（防御补丁的原诊断见本机归档笔记（未随本仓库发布））：
+下表都是**改第三方插件源码**的本地补丁，不在上游；分**防御补丁**（上游 bug 的本地兜底）与**定制补丁**（有意改外观/行为）。**`omarchy update` 不会碰它们**（它只换 `/usr/share/omarchy`，不碰 `~/.config/`，见 §9.4）；会被冲掉的是 `omarchy plugin update` 或对该插件仓 `git pull` / `reset`，届时按需重打（防御补丁的原诊断见本机归档笔记（未随本仓库发布））：
 
 > **补丁存档**：公开仓 `omarchy/patches/` 存可重打的 diff（当前一个：`lock-explorer-generate.sh.patch`，含重打/回退步骤）。插件目录被 `.gitignore` 排除且各自带独立 git 仓，故不放插件文件本体。
+>
+> **floating-bar 例外：本机改动已收进插件仓库自己的提交**（`local:` 前缀，2026-09-25 合并为**单个**提交），不再靠散落的 `Bar.qml.bak.*` 重放。升级走 §9.3 的 rebase 流程即可（改的是跟踪分支，不是补丁文件）。
 
 | 插件 | 文件 | 补丁作用 |
 |---|---|---|
 | `io.github.lijiawei0305-pixel.mihomo` | `ProxiesPage.qml` | 防御：引擎未连接时 `svc` 为 null，原代码仍调 `svc.t()` 崩溃；改为先判 `root.svc` 再取文本 |
-| `charlieras262.floating-bar` | `Bar.qml` | 定制：Omablur 卸载（2026-09-16）后 `Style.shellOpacity` 彻底废弃，而上游写法是"背景强制 alpha=1 × shellOpacity（缺失回落 1）"→ **bar 会变实心**；改为 `color: root.background`（直接吃主题 `[bar] background-alpha` 0.5）+ `opacity: 1` |
+| `charlieras262.floating-bar` | `Bar.qml` | 定制：Omablur 卸载（2026-09-16）后 `Style.shellOpacity` 彻底废弃，而上游写法是"背景强制 alpha=1 × shellOpacity（缺失回落 1）"→ **bar 会变实心**；改为 `color: root.background`（直接吃主题 `[bar] background-alpha` 0.5）+ `opacity: 1`。**该改动已取代上游的 `typeof` 防御**（代码里已无 `shellOpacity` 引用） |
+| `charlieras262.floating-bar` | `Bar.qml` | 定制：`barBackground` 改 `BorderSurface` + 一圈与聚焦窗口同源的 `hyprlandActiveSpec` 渐变（五彩琉璃环），宽度运行时 probe `general:border_size`；环可开关（`shell.json` → `bar.borderRing`，命令 `omarchy-bar-ring`）。细节见 `omarchy-visual-tweaks.md` §7.2/§7.4 |
 | `charlieras262.floating-bar` | `Bar.qml` `injectProps()` | 防御：早期实例化时 `root` 未就绪，`target.bar = root` 抛 "Cannot assign undefined to QObject*"；加 `&& root` 守卫 |
 | `jianlongliu.workspaces` | `Workspaces.qml` | 防御：`hovered` 原为 readonly 绑定、在 MouseArea 创建前求值报 undefined；改普通属性 + onEntered/onExited 驱动（此项在配置仓库，非插件仓库） |
 | `meviusisback.ai-subs` | `assets/icons/commandcode.svg` | 定制：Command Code 品牌图原是「黑圆角方块 + 白 ⌘」，换成**裸 ⌘**（只留白色 ⌘ path，viewBox 收紧到占图标位 20/24）→ 见 §8.4 的重打脚本 |
@@ -322,6 +325,7 @@ grim -g "$((x-10)),$((y-10)) $((w+20))x$((h+20))" /tmp/dock.png
 ## 九、上游跟踪：clone 与第三方插件
 
 > **两条独立跟踪线**，别混：① **clone**（`jianlongliu.*`）跟 **omarchy 本体**走，随 omarchy 升级核对；② **第三方插件**（其他人发布的）各自有 git 上游，跟**插件作者**走，与 omarchy 版本无关——**只盯 ① 会漏掉 ②**（2026-09-24 实测漏了两个大版本）。
+> **"上游"有两个、指向不同东西**：`omarchy update` 的上游 = **omarchy 本体**（`/usr/share/omarchy`）；`omarchy plugin update` 的上游 = **各插件自己的作者仓库**。问"会不会冲突"前先分清是哪一个。
 
 ### 9.1 clone 上游跟踪（对 omarchy）
 
@@ -367,7 +371,7 @@ done
 | --- | --- | --- |
 | `io.github.maajix.spotlight` | **52** | 已升 1.5.2 → **1.6.2**（含安全修复：拒绝伪造的 Wi-Fi/蓝牙行、Unicode 控制字符）。**无本地补丁 → 直接 `git merge --ff-only origin/main`** |
 | `io.github.sirjul1337.lock-explorer` | **39** | 已升 v1.7.7 → **v1.8.1**。**有本地补丁 → 必须先 rebase 再升**（步骤见 §9.3） |
-| `charlieras262.floating-bar` | 0（领先 1） | 上游无新版；领先的 1 个提交 = 本地防御补丁（§8.1） |
+| `charlieras262.floating-bar` | 0（**领先 1**） | 上游无新版（作者最后一次提交 2026-08-27，累计仅 14 个提交 → 项目基本定型）。领先的 1 个提交 = **本机全部改动合并成的单个补丁提交**（`local:` 前缀，见 §8.1）。**升级走 §9.3 rebase**；本机刻意选"提交制"而非"补丁文件制"——上游太慢，为它搭补丁机制属过度工程 |
 | `io.github.claudsondouglas.arcdock` / `meviusisback.ai-subs` | 0 | 已最新（各有本地补丁，工作区 dirty 属正常） |
 | 其余 13 个 | 0 | 已最新 |
 
@@ -387,3 +391,48 @@ git diff --cached --src-prefix=a/ --dst-prefix=b/ <文件> > <新补丁>.patch
 - **`git diff` 在冲突未标记时会吐 combined diff**（`diff --cc` + `index a,b..0000000`，91 行那种），`git apply` 拒收、报 `No valid patches in input`。**必须 `git add` 之后用 `--cached` 生成**（147 行、正常的 `diff --git` 头）。
 - 验证方式是**独立复现**而非目测：取上游版放临时目录 → `git apply` 新补丁 → `diff` 比对工作区，**逐字节一致**才算 rebase 成功。
 - 补丁基准版本要写进补丁文件旁的 README（换版本后旧补丁可能不适用）。
+
+#### 9.3.1 提交制插件（改动已 commit，不走补丁文件）
+
+`charlieras262.floating-bar` 用这条路：本机改动收在插件仓库自己的**单个提交**里，而不是散落的 patch 文件。
+
+```bash
+P=~/.config/omarchy/plugins/<插件>; cd "$P"
+git status --porcelain          # 必须先干净；脏就先提交或 stash
+git fetch origin
+git rev-list --count HEAD..origin/master    # 落后多少
+git rebase origin/master                     # 上游动过才需要；落后 0 时是空操作
+```
+
+| 判据 | 含义 |
+|---|---|
+| 落后 0 / 领先 1 | 正常态。上游没动；若 `omarchy plugin update` 报 "Updated" 是**假成功**（HEAD 非上游祖先 → `merge --ff-only` 失败），验真伪只认 reflog |
+| 落后 >0 | 上游有新提交 → 跑上面的 `rebase`。**先建安全分支** `git branch backup-<日期> HEAD` |
+| rebase 冲突 | 本机改动集中在一个提交，冲突面小；解完用 `diff <(git show backup-<日期>:<文件>) <(cat <文件>)` 比对，**只该有"上游新改动"差异** |
+
+**定期体检**：§9.2 的循环脚本已覆盖（`落后/领先/工作区脏` 三列）。这条命令看的是各插件**自己作者的**上游，与 omarchy 版本无关；`omarchy plugin update` 是静默的，不体检就会像 2026-09-24 那次漏掉 `spotlight`(落后 52)/`lock-explorer`(落后 39) 一样无人察觉。
+
+**合并提交的坑**：多个本机提交压成一个时**别用 `git rebase -i`（交互式，非交互环境会挂）**。用 `git branch backup-x HEAD && git reset --soft <上游> && git commit` —— 工作树一个字节都不动，不可能冲突；压完必验 `diff <(git show backup-x:<文件>) <(git show HEAD:<文件>)` **逐字节一致**。
+
+### 9.4 本机定制的暴露面：谁会覆盖什么
+
+问「升级会不会冲掉我的改动」前，先分清是哪次升级。本机定制按**存放位置**分三类，暴露面完全不同：
+
+| 定制 | 位置 | `omarchy update` | `omarchy plugin update` | 兜底 |
+|---|---|---|---|---|
+| 菜单扩展 `style.bar.ring` | `~/.config/omarchy/extensions/omarchy-menu.jsonc` | **不碰** | — | 配置仓库 git（`git checkout` 即可回） |
+| 浮栏补丁（环 + alpha + 守卫） | `~/.config/omarchy/plugins/charlieras262.floating-bar/` | **不碰** | ff 失败 → 跳过（提交制，§9.3.1） | 插件仓库自己的 `local:` 提交 |
+| clone（`jianlongliu.*`） | `~/.config/omarchy/plugins/jianlongliu.*/` | **不碰** | — | 配置仓库 git；上游结构变了走 §9.1 核对 |
+| 改 `/usr/share/omarchy/` | — | **必覆盖** | — | **无** → 所以从不改这里 |
+
+**关键事实：`omarchy update` 不碰 `~/.config/omarchy/` 下的任何东西。** 实测依据：
+
+- `omarchy-update` 与 `omarchy-update-system-pkgs` 里 `config/omarchy` 出现 **0 次**；整条流水线是 `prune → snapshot → dev/keyring → system-pkgs → migrate → post-update hook → aur-pkgs → mise → orphans → restart`。
+- `grep -l extensions /usr/share/omarchy/migrations/*.sh` 命中的 7 个全是 **Chromium / VSCode 的扩展目录**，与本机 `~/.config/omarchy/extensions/` 无关。
+- `omarchy refresh shell` 只重置 `shell.json` + bar defaults，**不动 extensions/**。
+
+**`extensions/` 是官方扩展点，不是 hack**：出厂模板（`/etc/skel/.config/omarchy/extensions/omarchy-menu.jsonc` 与 `/usr/share/omarchy/config/omarchy/extensions/omarchy-menu.jsonc` 内容一致）文件头注释明确写着「Reuse an existing id to override/extend it」。用户文件与上游按 **id 合并**，新增 id 不会覆盖上游任何行，上游增删行也不动用户行。
+
+**唯一例外**：`omarchy reinstall`（核弹路径，`omarchy-reinstall-configs` 执行 `cp -af /etc/skel/. ~/`，**不备份**）会把 extensions 拷回空模板 → 定制行**丢失**（不是冲突）。恢复：`git checkout -- extensions/omarchy-menu.jsonc`（配置仓库已跟踪该文件）。需要手动敲 + 过确认弹窗，不会自动发生。
+
+**唯一需要留意的耦合**：菜单行依赖 ① 上游 id `style.bar` 存在（parent 靠点号推断）② menu 的字段 schema。**上游若改名/删除 `style.bar`，本机那行会静默不显示（不报错）**。`omarchy update` 后进菜单扫一眼即可，无需其他动作。
