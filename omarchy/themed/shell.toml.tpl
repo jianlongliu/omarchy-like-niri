@@ -2,7 +2,7 @@
 # 本文件 = /usr/share/omarchy/default/themed/shell.toml.tpl 的副本，唯一改动：
 # [menu] background 由 {{ background }} 改成 {{ lighter_background }} —— 菜单卡片默认
 # 与页面背景同色(近黑)会糊成一片，取高两档的表面色才有层次。见
-# （本地笔记存档） §3.4。
+#（本地笔记存档） §3.4。
 # ⚠️ omarchy update 改了上游这份 tpl 后，需手动 diff 合并到此处。
 #
 # Omarchy shell surfaces. Colors derive from colors.toml; sizes and the

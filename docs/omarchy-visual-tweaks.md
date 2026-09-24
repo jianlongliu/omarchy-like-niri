@@ -1,7 +1,7 @@
 # Omarchy bar 视觉与克隆整合笔记
 
 > 最后核对：2026-09-24 · Omarchy 4.0.4 / Hyprland 0.56.2
-> 整合 （本地笔记存档） 原分散的 bar 视觉笔记（字号/对齐、克隆插件、工作区胶囊/磨砂玻璃、字体链、flea 对齐、GTK 应用对齐），去重后重排。相关总文档：`omarchy-nirification.md`；插件清单见 `omarchy-plugins.md`。
+> 整合（本地笔记存档）原分散的 bar 视觉笔记（字号/对齐、克隆插件、工作区胶囊/磨砂玻璃、字体链、flea 对齐、GTK 应用对齐），去重后重排。相关总文档：`omarchy-nirification.md`；插件清单见 `omarchy-plugins.md`。
 > 本机 bar：`charlieras262.floating-bar`（`Bar.qml`）；Hyprland 层规则在 `~/.config/hypr/apps/omarchy-shell.lua`；透明底在 `~/.config/omarchy/shell.toml`。
 
 ## 〇、公共前置（各节通用，先读）
