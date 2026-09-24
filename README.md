@@ -82,6 +82,8 @@
 
 ## 说明
 
+- **⚠️ 这是 vibe coding 的产物，建议交给 AI agent 安装。**
+  这套配置由单人 + AI agent 长期迭代而成：**无测试、无 CI**，多数结论只在本机（Omarchy 4.0.4 / Hyprland 0.56.2）实测过一次，版本一变就可能失效。文档写得细（每步带验证与回退）正是为了弥补这一点——**按文档走 + 每步验证**比凭经验手改可靠得多。在你的机器上遇到问题，把对应文档章节和报错一起交给 agent 排查。
 - 配置与文档由 AI agent 生成/整理，含 AI 协助调参、排障。
 - 各插件版权归原作者；自改 `jianlongliu.*` 克隆插件基于 Omarchy 内建插件；补丁均注明上游与基准版本。
 - 改动历史见 [`hypr/CHANGELOG.md`](hypr/CHANGELOG.md) 与 [`omarchy/CHANGELOG.md`](omarchy/CHANGELOG.md)。
